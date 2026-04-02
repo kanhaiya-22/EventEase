@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node -e ':*)",
+      "Bash(node:*)",
+      "Bash(choco install:*)",
+      "Bash(powershell -Command \"Get-Command pdftoppm -ErrorAction SilentlyContinue\")",
+      "Bash(where magick:*)",
+      "Bash(where convert:*)",
+      "Bash(curl -L -o /tmp/poppler.zip \"https://github.com/oschwartz10612/poppler-windows/releases/download/v24.08.0-0/Release-24.08.0-0.zip\")",
+      "Bash(mkdir -p /tmp/ppt_slides)",
+      "Bash(/tmp/poppler_extracted/poppler-24.08.0/Library/bin/pdftoppm.exe -png -r 200 'C:/Project/Pro/EventEase/docs/Purple Modern Project Presentation.pdf' /tmp/ppt_slides/slide)",
+      "Read(//tmp/**)",
+      "Bash(cygpath -w /tmp/ppt_slides/slide-01.png)",
+      "Bash(echo \"C:\\\\\\\\Users\\\\\\\\admin\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\ppt_slides\\\\\\\\slide-01.png\")"
+    ]
+  }
+}
