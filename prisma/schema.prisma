@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  ORGANIZER
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventCategory {
+  TECHNICAL
+  CULTURAL
+  WORKSHOP
+  SEMINAR
+  HACKATHON
+  SPORTS
+  SOCIAL
+  OTHER
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+}
+
+enum AttendanceMethod {
+  QR
+  MANUAL
+}
+
+enum NotificationType {
+  EVENT_CREATED
+  EVENT_APPROVED
+  EVENT_REJECTED
+  EVENT_UPDATED
+  EVENT_CANCELLED
+  EVENT_REMINDER
+  REGISTRATION_CONFIRMED
+  REGISTRATION_WAITLISTED
+  CERTIFICATE_READY
+  GENERAL
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  events         Event[]
+  certTemplates  CertTemplate[]
+
+  @@map("organizations")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String
+  role          Role      @default(STUDENT)
+  department    String?
+  year          String?
+  phone         String?
+  interests     String[]  @default([])
+  avatarUrl     String?
+  emailVerified DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orgId String?
+  org   Organization? @relation(fields: [orgId], references: [id])
+
+  accounts Account[]
+  sessions Session[]
+
+  organizedEvents Event[]        @relation("EventOrganizer")
+  approvedEvents  Event[]        @relation("EventApprover")
+  registrations   Registration[]
+  certificates    Certificate[]
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String        @db.Text
+  category    EventCategory
+  tags        String[]      @default([])
+  startDate   DateTime
+  endDate     DateTime
+  venue       String
+  capacity    Int
+  posterUrl   String?
+  status      EventStatus   @default(DRAFT)
+  customFields Json         @default("[]")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  organizerId  String
+  organizer    User          @relation("EventOrganizer", fields: [organizerId], references: [id])
+  approvedById String?
+  approvedBy   User?         @relation("EventApprover", fields: [approvedById], references: [id])
+  orgId        String?
+  org          Organization? @relation(fields: [orgId], references: [id])
+
+  registrations Registration[]
+  certificates  Certificate[]
+
+  @@index([status])
+  @@index([category])
+  @@index([startDate])
+  @@map("events")
+}
+
+model Registration {
+  id           String             @id @default(cuid())
+  status       RegistrationStatus @default(CONFIRMED)
+  qrCode       String             @unique @default(uuid())
+  formData     Json               @default("{}")
+  registeredAt DateTime           @default(now())
+  cancelledAt  DateTime?
+
+  userId  String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId String
+  event   Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  attendance Attendance?
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@map("registrations")
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  checkedInAt DateTime         @default(now())
+  method      AttendanceMethod @default(QR)
+
+  registrationId String       @unique
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@map("attendances")
+}
+
+model CertTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  templateData Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orgId String?
+  org   Organization? @relation(fields: [orgId], references: [id])
+
+  certificates Certificate[]
+
+  @@map("cert_templates")
+}
+
+model Certificate {
+  id               String   @id @default(cuid())
+  certificateUrl   String?
+  verificationCode String   @unique @default(uuid())
+  issuedAt         DateTime @default(now())
+
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId    String
+  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   CertTemplate? @relation(fields: [templateId], references: [id])
+
+  @@unique([userId, eventId])
+  @@map("certificates")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
