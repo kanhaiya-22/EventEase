@@ -1,11 +1,22 @@
 # EventEase
 
-A unified college event management platform — handling the complete event lifecycle from creation and approval to registration, QR attendance, certificate generation, and analytics.
+A unified college event management platform — handling the complete event lifecycle from creation and approval to registration, QR attendance, certificate generation, and analytics. **Supports multiple colleges with complete organizational individuality** while maintaining a centralized platform for all UP colleges.
+
+## Features
+
+- 🎓 **Multi-College Support** — Each college maintains complete individuality and separation
+- 📅 **Event Management** — Create, publish, and manage college-specific events  
+- 👥 **Registration System** — Students can register for events with capacity management
+- 🎟️ **QR Code Attendance** — Generate unique QR codes per registration
+- 📊 **Event Analytics** — Track registrations and attendance per college
+- 🎓 **Certificates** — Generate certificates for event attendees
+- 🔐 **Authentication** — Credentials + Google OAuth support
+- 🎨 **Responsive UI** — Modern, mobile-friendly interface
 
 ## Tech Stack
 
 - **Next.js 14+** (App Router) — Frontend + API
-- **PostgreSQL** + **Prisma** — Database
+- **PostgreSQL** + **Prisma** — Database with organization/college support
 - **NextAuth.js** — Authentication (credentials + Google OAuth)
 - **Tailwind CSS** + **shadcn/ui** — UI
 - **TanStack Query** — Server state management
@@ -62,8 +73,13 @@ prisma/
 
 ## Documentation
 
+- **[COLLEGE_INDIVIDUALITY.md](COLLEGE_INDIVIDUALITY.md)** — Multi-college support, organization structure, and college-specific features
+- **[FIX_SUMMARY.md](FIX_SUMMARY.md)** — Event clicking error fix and quick reference
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — System architecture and data flow diagrams
+- **[IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md)** — Complete implementation report
 - **[plan.md](plan.md)** — Full product plan, architecture, and roadmap
 - **[CLAUDE.md](CLAUDE.md)** — Development conventions and commands
+- **[API_TESTING_GUIDE.md](API_TESTING_GUIDE.md)** — API endpoints and testing
 
 ## License
 

@@ -1,0 +1,435 @@
+[
+  {
+    "event_id": "SHAURYOTSAVA_2025",
+    "title": "Shauryotsava-2025",
+    "category": "SPORTS",
+    "event_type": "Sports Festival",
+    "start_date": "2025-02-21",
+    "end_date": "2025-02-23",
+    "description": "Annual sports festival of IET Lucknow with the tagline 'PLAY LIKE THERE'S NO TOMORROW'. A multi-day sporting event featuring various competitions and athletic activities.",
+    "location": "IET Lucknow Campus, Sitapur Road, Lucknow, Uttar Pradesh 226021",
+    "venue": "IET Lucknow Campus",
+    "capacity": 2000,
+    "organizer": "Sports Committee, IET Lucknow",
+    "registration_link": "https://shauryotsava.ietlucknow.ac.in/register",
+    "official_website": "https://shauryotsava.ietlucknow.ac.in/",
+    "contact_email": "shauryotsava@ietlucknow.ac.in",
+    "coordinators": [
+      {
+        "name": "Sandeep Kumar Patel",
+        "email": "Sandeep8175063305@gmail.com",
+        "mobile": "6389181405"
+      },
+      {
+        "name": "Abhishek Mishra",
+        "email": "mabhishekmishra029@gmail.com",
+        "mobile": "6306505310"
+      }
+    ],
+    "social_media": {
+      "facebook": "https://www.facebook.com/share/15xD21VxVV/",
+      "instagram": "https://www.instagram.com/shauryotsava_ietlko"
+    }
+  },
+  {
+    "event_id": "ENCORE_2026",
+    "title": "Encore-26: Nawabi Elegance",
+    "category": "CULTURAL",
+    "event_type": "Cultural Festival",
+    "start_date": "2026-02-19",
+    "end_date": "2026-02-21",
+    "description": "Annual cultural festival of IET Lucknow celebrating the Nawabi Elegance theme. Features 30+ events, 10K+ footfall, ₹2L+ prize pool with 5+ celebrity appearances.",
+    "location": "IET Lucknow Campus, Sitapur Road, Lucknow",
+    "venue": "Campus Venue",
+    "capacity": 10000,
+    "organizer": "Cultural Society, IET Lucknow",
+    "registration_link": "https://encore.ietlucknow.ac.in/login",
+    "official_website": "https://encore.ietlucknow.ac.in/",
+    "contact_email": "encore@ietlucknow.ac.in",
+    "prize_pool": "₹2,00,000+",
+    "celebrity_appearances": ["Malti Chahar"],
+    "events_offered": [
+      "Solo Dance (Natraj)",
+      "Duo Dance (Rhythm Rebels)",
+      "Group Dance (Raqs)",
+      "Dance Battle (One to One)",
+      "Solo Singing (Sargam)",
+      "Rap Battle (Raftaar)",
+      "Band War (Swarsangam)",
+      "Street Play (Bawaal Nukkad)",
+      "Monoact (Ekanki)",
+      "Skit (Tamasha)",
+      "Mime",
+      "Mimicry (Kirdaar)",
+      "Cosplay",
+      "Relay Rangoli",
+      "Live Sketching",
+      "Brush the Theme Painting",
+      "Face Painting",
+      "Graffiti Extravanza",
+      "T-Shirt Painting",
+      "Photography (Darpan Mirage)",
+      "Reel Making",
+      "Picture Story",
+      "Short Film Making (Safarnama)",
+      "Essay Writing",
+      "Story Writing with Twist (Afsane)",
+      "Debate (Roobaroo)",
+      "JAM (Jumla)",
+      "Open Stage (Rangmanch)",
+      "Literary Quiz",
+      "Marketing Mania",
+      "Case Study (Tehkikat)",
+      "Startup Auction",
+      "Startup Conclave",
+      "Model United Nations",
+      "Treasure Hunt",
+      "Mr/Miss Encore Pageant"
+    ]
+  },
+  {
+    "event_id": "SIH_2023",
+    "title": "Smart India Hackathon 2023",
+    "category": "HACKATHON",
+    "event_type": "Hackathon",
+    "year": 2023,
+    "description": "National level hackathon organized in collaboration with the Institution's Innovation Council (IIC) to develop solutions for real-world problems.",
+    "location": "IET Lucknow Campus",
+    "organizer": "Institution's Innovation Council (IIC), IET Lucknow",
+    "official_link": "https://www.ietlucknow.ac.in/content/6255",
+    "official_website": "https://www.ietlucknow.ac.in/iic"
+  },
+  {
+    "event_id": "IEEE_WIE_DAY_2025",
+    "title": "IEEE Women in Engineering Day 2025",
+    "category": "TECHNICAL",
+    "event_type": "Awareness & Celebration",
+    "start_date": "2025-07-01",
+    "description": "Celebrates the achievements and contributions of women in engineering. Organized by IEEE Student Chapter.",
+    "organizer": "IEEE Student Chapter UNIT STB62961",
+    "official_website": "https://ieee.ietlucknow.ac.in/",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "IEEE_ENV_DAY_2025",
+    "title": "World Environment Day 2025",
+    "category": "SOCIAL",
+    "event_type": "Awareness Program",
+    "start_date": "2025-06-05",
+    "description": "Environmental awareness program organized by IEEE Student Chapter.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "IEEE_TELECOM_DAY_2025",
+    "title": "World Telecommunication and Information Society Day 2025",
+    "category": "TECHNICAL",
+    "event_type": "Awareness Program",
+    "start_date": "2025-05-17",
+    "description": "Celebrates the role of telecommunications and ICT in today's society.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "GRADUATE_TALK_SERIES_2025",
+    "title": "Graduate Talk Series 2025",
+    "category": "TECHNICAL",
+    "event_type": "Seminar/Talk",
+    "start_date": "2025-04-16",
+    "description": "Series of talks by graduate students and professionals sharing their experiences and knowledge.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "VIS_VIS_2025",
+    "title": "Vis-à-Vis 2025",
+    "category": "LITERARY",
+    "event_type": "Literary & Communication Series",
+    "start_date": "2025-11-15",
+    "description": "Annual literary and communication-based initiative for first-year Electrical Engineering students featuring four segments: Group Discussion, Presentation, JAM (Just A Minute), and Debate.",
+    "organizer": "Electrical Engineering Society (EES)",
+    "location": "Seminar Hall, EED, IET Lucknow",
+    "events_included": [
+      "Group Discussion (GD)",
+      "Presentation",
+      "Just A Minute (JAM)",
+      "Debate"
+    ],
+    "social_media": {
+      "linkedin": "https://www.linkedin.com/company/electrical-engineering-society-iet-lucknow/",
+      "facebook": "http://fb.me/EES.iet",
+      "instagram": "https://instagram.com/ees_iet"
+    }
+  },
+  {
+    "event_id": "TEACHER_DAY_2025",
+    "title": "Teacher's Day Celebration 2025",
+    "category": "SOCIAL",
+    "event_type": "Cultural Celebration",
+    "start_date": "2025-09-07",
+    "description": "Annual celebration honoring teachers and their contributions to education and student development. Organized by Electrical Engineering Society.",
+    "organizer": "Electrical Engineering Society (EES)",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "MENSTRUAL_HEALTH_2025",
+    "title": "Menstrual Health and Hygiene Awareness Program",
+    "category": "SOCIAL",
+    "event_type": "Awareness & Health Program",
+    "start_date": "2025-05-28",
+    "description": "Focus on menstrual health, hygiene, and cervical cancer prevention and awareness.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "MECHFEST",
+    "title": "MECHFEST",
+    "category": "TECHNICAL",
+    "event_type": "Technical & Cultural Fest",
+    "description": "Technical and cultural festival organized by the Mechanical Engineering Department. Features technical competitions and cultural events to complement academics.",
+    "organizer": "Mechanical Engineering Forum (MEF), Department of Mechanical Engineering",
+    "official_website": "https://mef.ietlucknow.ac.in/mechfest/",
+    "location": "IET Lucknow Campus"
+  },
+  {
+    "event_id": "SRISHTI",
+    "title": "Srishti - Annual MEF Publication",
+    "category": "CULTURAL",
+    "event_type": "Publication/Art Exhibition",
+    "description": "Annual publication by Mechanical Engineering Department dedicated to mechanical engineering enthusiasts. Platform for artistic expression, knowledge sharing, and student contributions.",
+    "organizer": "Mechanical Engineering Forum (MEF)",
+    "official_website": "https://mef.ietlucknow.ac.in/srishti/"
+  },
+  {
+    "event_id": "SMART_HARASSMENT_AWARENESS",
+    "title": "Sexual Harassment Prevention Program",
+    "category": "SOCIAL",
+    "event_type": "Awareness Workshop",
+    "description": "Series of activities organized by Sarojini Girls Hostel aimed at addressing and preventing sexual harassment at workplace. Includes workshops and awareness sessions.",
+    "organizer": "Sarojini Girls Hostel, IET Lucknow",
+    "location": "Girls Hostel Campus"
+  },
+  {
+    "event_id": "VISHVKARMA_POOJA_2024",
+    "title": "Vishvkarma Pooja 2024",
+    "category": "CULTURAL",
+    "event_type": "Religious/Cultural Celebration",
+    "start_date": "2024-09-16",
+    "description": "Traditional celebration honoring Vishvkarma (deity of craftsmanship and engineering).",
+    "location": "IET Lucknow Campus"
+  },
+  {
+    "event_id": "BLOOD_DONATION_2024",
+    "title": "रक्तदान को सम्मान 2024 (Blood Donation Camp 2024)",
+    "category": "SOCIAL",
+    "event_type": "Blood Donation Camp",
+    "start_date": "2024-11-14",
+    "description": "Blood donation camp organized to encourage students and staff to contribute to society through blood donation.",
+    "location": "IET Lucknow Campus"
+  },
+  {
+    "event_id": "IEEE_WOMEN_ENG_DAY_2024",
+    "title": "IEEE Women in Engineering Day 2024",
+    "category": "TECHNICAL",
+    "event_type": "Celebration & Awareness",
+    "year": 2024,
+    "description": "Celebrates the achievements and contributions of women in engineering and IEEE.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "KEYLECTURE_PROF_NEELAM",
+    "title": "Keynote Lecture by Prof. Neelam Srivastava",
+    "category": "TECHNICAL",
+    "event_type": "Seminar/Lecture",
+    "description": "Distinguished lecture by Professor Neelam Srivastava on specialized technical topics.",
+    "organizer": "IET Lucknow",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "WORLD_TELECOM_DAY_2024",
+    "title": "World Telecommunication and Information Society Day 2024",
+    "category": "TECHNICAL",
+    "event_type": "Awareness Program",
+    "start_date": "2024-05-17",
+    "description": "Celebrates the role of telecommunications and information communication technologies.",
+    "organizer": "IEEE Student Chapter",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "BIOSPARK_2024",
+    "title": "BioSpark 2024",
+    "category": "TECHNICAL",
+    "event_type": "Bio-Technology/Science Event",
+    "year": 2024,
+    "description": "Event focused on biotechnology, biosciences, and related technical domains.",
+    "organizer": "IET Lucknow",
+    "location": "IET Lucknow Campus"
+  },
+  {
+    "event_id": "INTELLIGENTZIA_HACKATHON_2021",
+    "title": "Intelligentzia: Hackathon 2021",
+    "category": "HACKATHON",
+    "event_type": "Hackathon Competition",
+    "year": 2021,
+    "description": "Hackathon organized by Institution's Innovation Council (IIC) for 'fabricating solutions for the contemporary world'. Grand finale held on July 15, 2021.",
+    "organizer": "Institution's Innovation Council (IIC), IET Lucknow",
+    "location": "IET Lucknow Campus"
+  },
+  {
+    "event_id": "IIC_WORKSHOPS_2021_2022",
+    "title": "IIC Workshop Series 2021-2022",
+    "category": "WORKSHOP",
+    "event_type": "Educational Workshops",
+    "description": "Series of workshops organized by Institution's Innovation Council covering topics like:",
+    "topics": [
+      "Design Thinking and Critical Thinking",
+      "Entrepreneurship and Innovation as Career Opportunity",
+      "Patent Filing",
+      "Prototype and Process Design",
+      "UP-Startup Policy",
+      "NIRF Rankings",
+      "ARIIA Rankings",
+      "Internship at Startups",
+      "How to Plan for Startup (Legal & Ethical Steps)"
+    ],
+    "organizer": "Institution's Innovation Council (IIC), IET Lucknow",
+    "location": "IET Lucknow (Online & Offline)"
+  },
+  {
+    "event_id": "INNOVATOR_MENTORSHIP",
+    "title": "Mentorship Sessions for Innovators",
+    "category": "WORKSHOP",
+    "event_type": "Mentorship Program",
+    "description": "Regular mentorship sessions conducted by Innovation Ambassadors for student entrepreneurs and innovators.",
+    "organizer": "Institution's Innovation Council (IIC)",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "IDEA_BOX_PLATFORM",
+    "title": "IDEA-BOX - Monthly Innovation Platform",
+    "category": "TECHNICAL",
+    "event_type": "Continuous Innovation Program",
+    "description": "Platform where IET students can submit innovative ideas monthly. Winners recognized and rewarded. Ongoing program throughout academic year.",
+    "organizer": "Institution's Innovation Council (IIC)",
+    "location": "Online"
+  },
+  {
+    "event_id": "E_CELL_ACTIVITIES",
+    "title": "E-Cell Events and Activities",
+    "category": "ENTREPRENEURSHIP",
+    "event_type": "Entrepreneurship Hub",
+    "description": "Entrepreneurship Cell organizes regular events for students interested in startups, innovation, and business development. Includes competitions, workshops, and networking sessions.",
+    "organizer": "Entrepreneurship Cell (E-Cell), IET Lucknow",
+    "official_website": "https://www.ietlucknow.ac.in/ecell",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "STARTUP_INCUBATION_NNF",
+    "title": "Navyug Navachar Foundation (NNF) - Startup Incubation",
+    "category": "ENTREPRENEURSHIP",
+    "event_type": "Incubation & Mentorship",
+    "description": "Startup incubation center providing infrastructure, mentorship, funding support, and investor connect for student entrepreneurs and startup founders.",
+    "organizer": "Navyug Navachar Foundation, IET Lucknow",
+    "official_website": "https://nnf.ietlucknow.ac.in/",
+    "contact_email": "nnf@ietlucknow.ac.in",
+    "services": [
+      "Incubation Facility",
+      "Laboratory Support",
+      "Funding Support",
+      "Mentors Connect",
+      "Investors Connect",
+      "Conference & Meeting Rooms"
+    ],
+    "location": "3rd Floor, New Mechanical & Chemical Building, IET Lucknow"
+  },
+  {
+    "event_id": "PARMARTH_SOCIAL",
+    "title": "Parmarth - Social Service Club",
+    "category": "SOCIAL",
+    "event_type": "Social Service & Community Engagement",
+    "start_year": 2015,
+    "description": "Social club dedicated to community development and social welfare. Works in slum areas providing education, healthcare, and support. Services include: classes for underprivileged children, girls' education, RTE school admissions, and social services.",
+    "organizer": "Parmarth, IET Lucknow",
+    "official_website": "https://parmarth.ietlucknow.ac.in/",
+    "contact_email": "parmarth@ietlucknow.ac.in",
+    "operations": [
+      "Education Classes",
+      "Girls Education Programs",
+      "Schooling (RTE Admissions)",
+      "Social Services",
+      "Medical Help",
+      "Donation Programs",
+      "Child Sponsorship"
+    ],
+    "social_media": {
+      "facebook": "https://www.facebook.com/parmarth.iet/",
+      "twitter": "https://twitter.com/ietparmarth",
+      "instagram": "https://www.instagram.com/parmarth.iet/",
+      "linkedin": "https://www.linkedin.com/company/parmarth-iet-lucknow/",
+      "youtube": "https://www.youtube.com/channel/UCy66KqRs1rKSHXNVdLFSO7Q"
+    }
+  },
+  {
+    "event_id": "GDSC_LUCKNOW",
+    "title": "Google Developer Student Club (GDSC)",
+    "category": "TECHNICAL",
+    "event_type": "Developer Community",
+    "description": "Community for students interested in Google technologies and developer skills. Regular workshops, talks, and collaborative projects.",
+    "organizer": "Google Developer Student Club @ IET Lucknow",
+    "official_website": "https://gdsc.community.dev/institute-of-engineering-technology-lucknow/",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "SEED_SOCIETY",
+    "title": "SEED (Society for Electronics Exploration and Development)",
+    "category": "TECHNICAL",
+    "event_type": "Technical Society",
+    "description": "Technical society focused on electronics, embedded systems, and related technologies. Organizes workshops, projects, and technical competitions.",
+    "organizer": "Society for Electronics Exploration and Development (SEED)",
+    "official_website": "https://www.ietlucknow.ac.in/node/621/",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "EES_ACTIVITIES",
+    "title": "Electrical Engineering Society Activities",
+    "category": "TECHNICAL",
+    "event_type": "Departmental Technical Society",
+    "description": "Active society organizing technical events, workshops, industrial visits, and competitions for Electrical Engineering students.",
+    "organizer": "Electrical Engineering Society (EES), Department of Electrical Engineering",
+    "official_website": "https://eesietlko.blogspot.com/",
+    "events_organized": [
+      "Hold the Flame",
+      "Tech Talks",
+      "Industrial Visits",
+      "Vis-à-Vis (Literary Series)",
+      "Department-level competitions"
+    ],
+    "social_media": {
+      "linkedin": "https://www.linkedin.com/company/electrical-engineering-society-iet-lucknow/",
+      "facebook": "http://fb.me/EES.iet",
+      "instagram": "https://instagram.com/ees_iet"
+    }
+  },
+  {
+    "event_id": "IEEE_CHAPTER",
+    "title": "IEEE Student Chapter @ IET Lucknow",
+    "category": "TECHNICAL",
+    "event_type": "Professional Society",
+    "established": 2003,
+    "description": "IEEE Student Chapter providing access to research papers, journals, and technical resources. Organizes seminars, workshops, and awareness programs on latest technological trends.",
+    "organizer": "IEEE Student Chapter (Unit code: STB62961)",
+    "official_website": "https://ieee.ietlucknow.ac.in/",
+    "location": "IET Lucknow"
+  },
+  {
+    "event_id": "ISSACC_ACTIVITIES",
+    "title": "ISSACC Events and Activities",
+    "category": "TECHNICAL",
+    "event_type": "Technical Community",
+    "description": "Information Systems and Software Application Committee organizing technical events and activities.",
+    "organizer": "ISSACC, IET Lucknow",
+    "official_website": "https://issacc-website.vercel.app/",
+    "location": "IET Lucknow"
+  }
+]

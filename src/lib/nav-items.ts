@@ -12,6 +12,24 @@ export const dashboardNav: NavItem[] = [
     icon: "Calendar",
   },
   {
+    title: "My Registrations",
+    href: "/my-registrations",
+    icon: "Ticket",
+    roles: ["STUDENT"],
+  },
+  {
+    title: "Check In",
+    href: "/check-in",
+    icon: "QrCode",
+    roles: ["STUDENT"],
+  },
+  {
+    title: "My Events",
+    href: "/organized-events",
+    icon: "ListTodo",
+    roles: ["ORGANIZER", "ADMIN"],
+  },
+  {
     title: "Create Event",
     href: "/events/create",
     icon: "PlusCircle",

@@ -23,6 +23,25 @@ export async function registerUser(data: RegisterInput) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // If registering as ORGANIZER, assign to default organization
+  let orgId: string | undefined = undefined;
+  if (role === "ORGANIZER") {
+    // Get or create default organization
+    let org = await db.organization.findFirst({
+      where: { name: "IET Lucknow" },
+    });
+
+    if (!org) {
+      org = await db.organization.create({
+        data: {
+          name: "IET Lucknow",
+          slug: "iet-lucknow",
+        },
+      });
+    }
+    orgId = org.id;
+  }
+
   await db.user.create({
     data: {
       name,
@@ -31,6 +50,7 @@ export async function registerUser(data: RegisterInput) {
       role: role as "STUDENT" | "ORGANIZER",
       department,
       year,
+      orgId,
     },
   });
 

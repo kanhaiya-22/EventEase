@@ -161,6 +161,7 @@ model Event {
   venue       String
   capacity    Int
   posterUrl   String?
+  documents   Json          @default("[]")
   status      EventStatus   @default(DRAFT)
   customFields Json         @default("[]")
   createdAt   DateTime      @default(now())
