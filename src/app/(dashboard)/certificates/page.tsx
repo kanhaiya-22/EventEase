@@ -20,8 +20,9 @@ export default async function CertificatesPage() {
     redirect("/login");
   }
 
+  // Only show certificates that were actually issued by the organizer
   const certificates = await db.certificate.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, certificateUrl: { not: null } },
     include: {
       event: {
         select: {
@@ -93,7 +94,10 @@ export default async function CertificatesPage() {
                     </p>
                   )}
                 </div>
-                <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                <Badge variant="default" className="bg-green-600 flex-shrink-0 text-xs">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Issued
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -113,30 +117,17 @@ export default async function CertificatesPage() {
                 </div>
               </div>
 
-              {cert.certificateUrl && (
+              {cert.issuedAt ? (
                 <a
-                  href={cert.certificateUrl}
+                  href={`/api/certificates/${cert.id}/download?code=${cert.verificationCode}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                  className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
                 >
                   <Download className="h-4 w-4" />
-                  Download
+                  View Certificate
                 </a>
-              )}
-
-              {!cert.certificateUrl && cert.issuedAt && (
-                <div className="space-y-2">
-                  <Badge variant="default" className="w-fit bg-green-600">
-                    ✓ Issued
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">
-                    Certificate PDF will be available soon
-                  </p>
-                </div>
-              )}
-
-              {!cert.certificateUrl && !cert.issuedAt && (
+              ) : (
                 <Badge variant="secondary" className="w-fit">
                   Processing
                 </Badge>

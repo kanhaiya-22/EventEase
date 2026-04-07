@@ -40,6 +40,7 @@ export default async function EventDetailPage({
               user: {
                 email: session.user.email,
               },
+              status: { not: "CANCELLED" },
             }
           : undefined,
         select: {
@@ -57,7 +58,7 @@ export default async function EventDetailPage({
       },
       _count: {
         select: {
-          registrations: true,
+          registrations: { where: { status: { not: "CANCELLED" } } },
         },
       },
     },

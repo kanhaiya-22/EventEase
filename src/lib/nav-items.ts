@@ -27,19 +27,35 @@ export const dashboardNav: NavItem[] = [
     title: "My Events",
     href: "/organized-events",
     icon: "ListTodo",
-    roles: ["ORGANIZER", "ADMIN"],
+    roles: ["ORGANIZER"],
   },
   {
     title: "Create Event",
     href: "/events/create",
     icon: "PlusCircle",
-    roles: ["ORGANIZER", "ADMIN"],
+    roles: ["ORGANIZER"],
   },
   {
     title: "My Certificates",
     href: "/certificates",
     icon: "Award",
     roles: ["STUDENT"],
+  },
+  {
+    title: "Notifications",
+    href: "/notifications",
+    icon: "Bell",
+  },
+  {
+    title: "Profile",
+    href: "/profile",
+    icon: "User",
+  },
+  {
+    title: "Colleges",
+    href: "/admin/colleges",
+    icon: "Building2",
+    roles: ["ADMIN"],
   },
   {
     title: "Admin Panel",
@@ -51,5 +67,7 @@ export const dashboardNav: NavItem[] = [
 
 export const publicNav: NavItem[] = [
   { title: "Events", href: "/events" },
-  { title: "About", href: "#about" },
+  { title: "Verify Certificate", href: "/verify" },
+  { title: "About", href: "/about" },
+  { title: "Contact", href: "/contact" },
 ];

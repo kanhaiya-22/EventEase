@@ -98,30 +98,59 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
 export async function sendRegistrationConfirmation(
   email: string,
   name: string,
-  eventTitle: string
+  eventTitle: string,
+  eventDetails?: {
+    startDate: Date;
+    endDate: Date;
+    venue: string;
+    category?: string;
+  },
+  collegeName?: string
 ) {
+  const collegeDisplay = collegeName || "EventEase";
+
+  const startStr = eventDetails
+    ? new Date(eventDetails.startDate).toLocaleString("en-IN", {
+        dateStyle: "long",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+      })
+    : "";
+  const endStr = eventDetails
+    ? new Date(eventDetails.endDate).toLocaleString("en-IN", {
+        dateStyle: "long",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+      })
+    : "";
+
+  const eventDetailsBlock = eventDetails
+    ? `
+            <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0 0 8px;"><strong>Event:</strong> ${eventTitle}</p>
+              <p style="margin: 0 0 8px;"><strong>Start:</strong> ${startStr}</p>
+              <p style="margin: 0 0 8px;"><strong>End:</strong> ${endStr}</p>
+              <p style="margin: 0 0 8px;"><strong>Venue:</strong> ${eventDetails.venue}</p>
+              ${eventDetails.category ? `<p style="margin: 0;"><strong>Category:</strong> ${eventDetails.category}</p>` : ""}
+            </div>`
+    : "";
+
   const html = `
     <!DOCTYPE html>
     <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; }
-          .content { padding: 30px; background: #f9f9f9; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; }
-          .btn { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Registration Confirmed!</h1>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
           </div>
-          <div class="content">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Registration Confirmed!</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
             <p>Hello ${name},</p>
             <p>Thank you for registering for <strong>${eventTitle}</strong>.</p>
+            ${eventDetailsBlock}
             <p>Your registration has been successfully confirmed. You can now access the event details and check-in when the event starts.</p>
             <p>Make sure to:</p>
             <ul>
@@ -129,10 +158,10 @@ export async function sendRegistrationConfirmation(
               <li>Check your dashboard for event updates</li>
               <li>Arrive on time for the event</li>
             </ul>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="btn">View Your Dashboard</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">View Your Dashboard</a>
           </div>
-          <div class="footer">
-            <p>© 2026 EventEase. All rights reserved.</p>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 ${collegeDisplay} &middot; Powered by EventEase</p>
           </div>
         </div>
       </body>
@@ -153,41 +182,35 @@ export async function sendCertificateEmail(
   email: string,
   name: string,
   eventTitle: string,
-  certificateUrl: string
+  certificateUrl: string,
+  collegeName?: string
 ) {
+  const collegeDisplay = collegeName || "EventEase";
   const html = `
     <!DOCTYPE html>
     <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; }
-          .content { padding: 30px; background: #f9f9f9; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; }
-          .btn { display: inline-block; padding: 12px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
-          .certificate-preview { text-align: center; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Congratulations!</h1>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
           </div>
-          <div class="content">
+          <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Congratulations!</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
             <p>Hello ${name},</p>
             <p>Great news! Your certificate for <strong>${eventTitle}</strong> has been issued.</p>
             <p>This email contains your official certificate. You can now download, print, or share it.</p>
-            <div class="certificate-preview">
+            <div style="text-align: center; margin: 20px 0;">
               <p>Your certificate is ready:</p>
-              <a href="${certificateUrl}" class="btn">Download Certificate</a>
+              <a href="${certificateUrl}" style="display: inline-block; padding: 12px 30px; background: #f5576c; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">Download Certificate</a>
             </div>
             <p>You can also view all your certificates in your dashboard.</p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates" class="btn">View All Certificates</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates" style="display: inline-block; padding: 12px 30px; background: #f5576c; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">View All Certificates</a>
           </div>
-          <div class="footer">
-            <p>© 2026 EventEase. All rights reserved.</p>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 ${collegeDisplay} &middot; Powered by EventEase</p>
           </div>
         </div>
       </body>
@@ -208,40 +231,34 @@ export async function sendEventReminder(
   email: string,
   name: string,
   eventTitle: string,
-  eventDate: string
+  eventDate: string,
+  collegeName?: string
 ) {
+  const collegeDisplay = collegeName || "EventEase";
   const html = `
     <!DOCTYPE html>
     <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; }
-          .content { padding: 30px; background: #f9f9f9; }
-          .footer { background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; }
-          .btn { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; }
-          .event-date { font-size: 18px; color: #667eea; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Upcoming Event Reminder</h1>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
           </div>
-          <div class="content">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Upcoming Event Reminder</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
             <p>Hello ${name},</p>
             <p>This is a reminder that the event you registered for is coming up!</p>
             <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0;">
               <p><strong>Event:</strong> ${eventTitle}</p>
-              <p class="event-date">Date: ${eventDate}</p>
+              <p style="font-size: 18px; color: #667eea; font-weight: bold;">Date: ${eventDate}</p>
             </div>
             <p>Don't forget to join us! See you there!</p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" class="btn">View Event Details</a>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">View Event Details</a>
           </div>
-          <div class="footer">
-            <p>© 2026 EventEase. All rights reserved.</p>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 ${collegeDisplay} &middot; Powered by EventEase</p>
           </div>
         </div>
       </body>
@@ -251,6 +268,49 @@ export async function sendEventReminder(
   return sendEmail({
     to: email,
     subject: `Reminder: ${eventTitle} is coming up!`,
+    html,
+  });
+}
+
+/**
+ * Send registration cancellation confirmation email
+ */
+export async function sendRegistrationCancellation(
+  email: string,
+  name: string,
+  eventTitle: string,
+  collegeName?: string
+) {
+  const collegeDisplay = collegeName || "EventEase";
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
+          </div>
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Registration Cancelled</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <p>Hello ${name},</p>
+            <p>Your registration for <strong>${eventTitle}</strong> has been successfully cancelled.</p>
+            <p>If this was a mistake, you can re-register for the event from the events page (subject to availability).</p>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/events" style="display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">Browse Events</a>
+          </div>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 ${collegeDisplay} &middot; Powered by EventEase</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Registration Cancelled - ${eventTitle}`,
     html,
   });
 }

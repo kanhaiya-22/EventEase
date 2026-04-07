@@ -117,7 +117,16 @@ export async function deleteRegistration(registrationId: string, eventId: string
       console.error("Error creating notification or sending email:", notifError);
     }
 
+    // Revalidate all pages that display registration counts
     revalidatePath(`/organized-events/${eventId}/students`);
+    revalidatePath("/organized-events");
+    revalidatePath("/my-registrations");
+    revalidatePath("/dashboard");
+    revalidatePath("/profile");
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/admin");
+    revalidatePath("/admin/events");
 
     return {
       success: true,

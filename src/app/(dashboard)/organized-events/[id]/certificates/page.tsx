@@ -3,8 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import IssueCertificatesForm from "@/components/certificates/issue-certificates-form";
 
 interface CertificatesPageProps {
@@ -50,10 +49,7 @@ export default async function EventCertificatesPage({
             },
           },
           attendance: {
-            select: {
-              checkedInAt: true,
-              method: true,
-            },
+            select: { id: true },
           },
         },
       },
@@ -69,7 +65,9 @@ export default async function EventCertificatesPage({
     redirect("/organized-events");
   }
 
-  const attendedStudents = event.registrations.filter((reg) => reg.attendance);
+  const presentStudents = event.registrations.filter(
+    (reg) => reg.status === "CONFIRMED" && reg.attendance
+  );
 
   return (
     <div className="space-y-8">
@@ -104,11 +102,7 @@ export default async function EventCertificatesPage({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Registrations</p>
-              <p className="font-medium">{event.registrations.length}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Attended</p>
-              <p className="font-medium text-green-600">{attendedStudents.length}</p>
+              <p className="font-medium">{presentStudents.length}</p>
             </div>
           </div>
         </CardContent>
@@ -120,12 +114,8 @@ export default async function EventCertificatesPage({
           <CardTitle className="text-base">How to Issue Certificates</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>
-            <strong>Note:</strong> Certificates will only be issued to students who attended the event
-            (checked in via QR code).
-          </p>
           <ol className="list-decimal list-inside space-y-1">
-            <li>Select students from the list below who attended</li>
+            <li>Select the students you want to issue certificates to</li>
             <li>Click "Issue Certificates" button</li>
             <li>Certificates will be generated and students will be notified</li>
           </ol>
@@ -133,19 +123,19 @@ export default async function EventCertificatesPage({
       </Card>
 
       {/* Certificate Form */}
-      {attendedStudents.length > 0 ? (
+      {presentStudents.length > 0 ? (
         <IssueCertificatesForm
           eventId={event.id}
           eventTitle={event.title}
-          attendedStudents={attendedStudents}
+          registeredStudents={presentStudents}
         />
       ) : (
         <Card>
           <CardContent className="pt-6 text-center">
             <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-muted-foreground">No students attended this event yet</p>
+            <p className="text-muted-foreground">No students marked present for this event yet</p>
             <p className="text-sm text-gray-400 mt-1">
-              Only students who checked in via QR code can receive certificates
+              Mark attendance first, then issue certificates
             </p>
           </CardContent>
         </Card>

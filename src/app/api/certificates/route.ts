@@ -156,7 +156,8 @@ export async function POST(request: NextRequest) {
           certificate.user.email,
           certificate.user.name || "User",
           certificate.event.title,
-          certificateUrl
+          certificateUrl,
+          certificate.event.org?.name
         );
       }
     } catch (emailError) {

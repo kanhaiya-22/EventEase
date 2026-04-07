@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, FileText, Loader } from "lucide-react";
+import { FileText, Loader } from "lucide-react";
+import { toast } from "sonner";
 
 interface Student {
   id: string;
@@ -15,22 +16,18 @@ interface Student {
     email: string;
     department: string | null;
   };
-  attendance?: {
-    checkedInAt: Date;
-    method: string;
-  } | null;
 }
 
 interface IssueCertificatesFormProps {
   eventId: string;
   eventTitle: string;
-  attendedStudents: Student[];
+  registeredStudents: Student[];
 }
 
 export default function IssueCertificatesForm({
   eventId,
   eventTitle,
-  attendedStudents,
+  registeredStudents,
 }: IssueCertificatesFormProps) {
   const router = useRouter();
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
@@ -43,16 +40,16 @@ export default function IssueCertificatesForm({
   };
 
   const handleSelectAll = () => {
-    if (selectedStudents.length === attendedStudents.length) {
+    if (selectedStudents.length === registeredStudents.length) {
       setSelectedStudents([]);
     } else {
-      setSelectedStudents(attendedStudents.map((student) => student.user.id));
+      setSelectedStudents(registeredStudents.map((student) => student.user.id));
     }
   };
 
   const handleIssueCertificates = async () => {
     if (selectedStudents.length === 0) {
-      alert("Please select at least one student");
+      toast.error("Please select at least one student");
       return;
     }
 
@@ -69,23 +66,23 @@ export default function IssueCertificatesForm({
 
       if (res.ok) {
         const data = await res.json();
-        alert(`✓ Certificates issued successfully to ${data.count} student(s)`);
+        toast.success(`Certificates issued to ${data.count} student(s)`);
         setSelectedStudents([]);
         // Refresh the page
         router.refresh();
       } else {
         const error = await res.json();
-        alert(`❌ ${error.error || "Failed to issue certificates"}`);
+        toast.error(error.error || "Failed to issue certificates");
       }
     } catch (error) {
-      alert("❌ Error issuing certificates");
+      toast.error("Error issuing certificates");
       console.error(error);
     } finally {
       setIssuing(false);
     }
   };
 
-  const allSelected = selectedStudents.length === attendedStudents.length;
+  const allSelected = selectedStudents.length === registeredStudents.length;
 
   return (
     <>
@@ -110,13 +107,13 @@ export default function IssueCertificatesForm({
                 className="w-4 h-4 rounded border-gray-300 cursor-pointer"
               />
               <label className="font-medium cursor-pointer">
-                Select All ({attendedStudents.length} attended)
+                Select All ({registeredStudents.length} present)
               </label>
             </div>
 
             {/* Student List */}
             <div className="space-y-3">
-              {attendedStudents.map((registration) => (
+              {registeredStudents.map((registration) => (
                 <div
                   key={registration.id}
                   className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50"
@@ -133,9 +130,8 @@ export default function IssueCertificatesForm({
                       {registration.user.email}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-xs text-green-600 font-medium">Attended</span>
+                  <div className="text-xs text-muted-foreground">
+                    {registration.user.department || "—"}
                   </div>
                 </div>
               ))}

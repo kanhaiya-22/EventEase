@@ -47,7 +47,7 @@ export async function GET(
         },
         _count: {
           select: {
-            registrations: true,
+            registrations: { where: { status: { not: "CANCELLED" } } },
           },
         },
       },

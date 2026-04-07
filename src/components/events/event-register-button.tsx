@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface EventRegisterButtonProps {
   eventId: string;
@@ -24,10 +25,11 @@ export default function EventRegisterButton({
       if (res.ok) {
         window.location.reload();
       } else {
-        alert("Failed to register for event");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to register for event");
       }
     } catch (error) {
-      alert("Error registering for event");
+      toast.error("Error registering for event");
     } finally {
       setLoading(false);
     }

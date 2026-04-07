@@ -1,124 +1,125 @@
 import { db } from "@/lib/db";
-import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
+import { EventFilters } from "@/components/events/event-filters";
+import { EventCard } from "@/components/events/event-card";
+import { Suspense } from "react";
 
-export default async function EventsPage() {
+export const metadata = {
+  title: "Events",
+};
+
+interface EventsPageProps {
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    sort?: string;
+  }>;
+}
+
+export default async function EventsPage({ searchParams }: EventsPageProps) {
+  const params = await searchParams;
+  const { q, category, sort } = params;
+
+  // Scope events to the logged-in user's college
   const session = await auth();
-  
-  // Get all organizations for display
-  const organizations = await db.organization.findMany({
-    include: {
-      _count: {
-        select: {
-          events: {
-            where: { status: "PUBLISHED" }
-          }
-        }
-      }
+  let userOrgId: string | null = null;
+  let userOrgName: string | null = null;
+  if (session?.user?.email) {
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true, orgId: true, org: { select: { name: true } } },
+    });
+    if (user?.orgId) {
+      userOrgId = user.orgId;
+      userOrgName = user.org?.name ?? null;
     }
-  });
+  }
+
+  // Build dynamic where clause
+  const where: Prisma.EventWhereInput = {
+    status: "PUBLISHED",
+    // Logged-in users see only their college's events
+    ...(userOrgId && { orgId: userOrgId }),
+  };
+
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+      { venue: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  if (category && category !== "ALL") {
+    where.category = category as Prisma.EnumEventCategoryFilter;
+  }
+
+  // Build orderBy
+  let orderBy: Prisma.EventOrderByWithRelationInput;
+  switch (sort) {
+    case "date-desc":
+      orderBy = { startDate: "desc" };
+      break;
+    case "registrations":
+      orderBy = { registrations: { _count: "desc" } };
+      break;
+    case "title":
+      orderBy = { title: "asc" };
+      break;
+    default:
+      orderBy = { startDate: "asc" };
+  }
 
   const events = await db.event.findMany({
-    where: {
-      status: "PUBLISHED",
-    },
+    where,
     include: {
       organizer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+        select: { id: true, name: true, email: true },
       },
       org: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
+        select: { id: true, name: true, slug: true },
       },
       _count: {
-        select: {
-          registrations: true,
-        },
+        select: { registrations: { where: { status: { not: "CANCELLED" } } } },
       },
     },
-    orderBy: {
-      startDate: "asc",
-    },
+    orderBy,
   });
+
+  const resultText = q || category
+    ? `${events.length} event${events.length !== 1 ? "s" : ""} found`
+    : `${events.length} published events`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">Events</h1>
-          <p className="text-slate-300">
-            {events.length} published events available
-          </p>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-4">
+            {userOrgName ? `${userOrgName} Events` : "Events"}
+          </h1>
+          <p className="text-slate-300">{resultText}</p>
         </div>
+
+        <Suspense fallback={null}>
+          <EventFilters />
+        </Suspense>
 
         {events.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-slate-400 text-lg">No events published yet.</p>
+            <p className="text-slate-400 text-lg">
+              {q || category ? "No events match your filters." : "No events published yet."}
+            </p>
             <p className="text-slate-500 mt-2">
-              Check back soon for upcoming events!
+              {q || category
+                ? "Try adjusting your search or filters."
+                : "Check back soon for upcoming events!"}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => (
-              <a
-                key={event.id}
-                href={`/events/${event.id}`}
-                className="group bg-slate-800 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {event.posterUrl && (
-                  <div className="relative h-48 overflow-hidden bg-slate-700">
-                    <img
-                      src={event.posterUrl}
-                      alt={event.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                )}
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-blue-400 bg-blue-900 px-3 py-1 rounded-full">
-                      {event.category}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {event._count.registrations} registered
-                    </span>
-                  </div>
-                  
-                  {/* College/Organization Badge */}
-                  {event.org && (
-                    <div className="mb-2 text-xs font-semibold text-purple-300 bg-purple-900/30 px-2 py-1 rounded inline-block">
-                      📚 {event.org.name}
-                    </div>
-                  )}
-                  
-                  <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
-                    {event.title}
-                  </h3>
-                  <p className="text-slate-400 text-sm mb-4 line-clamp-2">
-                    {event.description}
-                  </p>
-                  <div className="space-y-2 text-sm text-slate-300">
-                    <p>📍 {event.venue}</p>
-                    <p>
-                      📅{" "}
-                      {new Date(event.startDate).toLocaleDateString("en-IN", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                    <p>👥 Capacity: {event.capacity}</p>
-                  </div>
-                </div>
-              </a>
+              <EventCard key={event.id} event={event} />
             ))}
           </div>
         )}

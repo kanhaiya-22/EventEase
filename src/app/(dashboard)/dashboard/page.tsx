@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, Award, TrendingUp, BarChart3, CheckCircle2 } from "lucide-react";
+import { Calendar, Users, Award, TrendingUp, BarChart3, CheckCircle2, Building2, Ticket } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,8 +21,260 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  // Admin gets a completely different dashboard
+  if (user.role === "ADMIN") {
+    const [totalColleges, totalUsers, totalEvents, totalRegistrations, totalCertificates] =
+      await Promise.all([
+        db.organization.count(),
+        db.user.count(),
+        db.event.count(),
+        db.registration.count(),
+        db.certificate.count(),
+      ]);
+
+    const recentColleges = await db.organization.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { users: true, events: true } },
+      },
+    });
+
+    const usersByRole = await db.user.groupBy({
+      by: ["role"],
+      _count: true,
+    });
+
+    const eventsByStatus = await db.event.groupBy({
+      by: ["status"],
+      _count: true,
+    });
+
+    const recentEvents = await db.event.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        org: { select: { name: true } },
+        _count: { select: { registrations: { where: { status: { not: "CANCELLED" } } } } },
+      },
+    });
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Platform Overview</h1>
+          <p className="text-muted-foreground mt-1">
+            Platform-wide analytics and management
+          </p>
+        </div>
+
+        {/* Platform Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Colleges
+              </CardTitle>
+              <Building2 className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">{totalColleges}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Users
+              </CardTitle>
+              <Users className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{totalUsers}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Events
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalEvents}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Registrations
+              </CardTitle>
+              <Ticket className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalRegistrations}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Certificates
+              </CardTitle>
+              <Award className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{totalCertificates}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Users by Role + Events by Status */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Users by Role</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {usersByRole.map((item) => (
+                  <div key={item.role} className="flex items-center justify-between">
+                    <Badge
+                      className={
+                        item.role === "ADMIN"
+                          ? "bg-red-100 text-red-800"
+                          : item.role === "ORGANIZER"
+                          ? "bg-purple-100 text-purple-800"
+                          : "bg-blue-100 text-blue-800"
+                      }
+                    >
+                      {item.role}
+                    </Badge>
+                    <span className="text-lg font-semibold">{item._count}</span>
+                  </div>
+                ))}
+                {usersByRole.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No users yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Events by Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {eventsByStatus.map((item) => (
+                  <div key={item.status} className="flex items-center justify-between">
+                    <Badge variant="secondary">{item.status}</Badge>
+                    <span className="text-lg font-semibold">{item._count}</span>
+                  </div>
+                ))}
+                {eventsByStatus.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No events yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Colleges Overview */}
+        {recentColleges.length > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Colleges</CardTitle>
+              <Link
+                href="/admin/colleges"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Manage all &rarr;
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentColleges.map((org) => (
+                  <Link
+                    key={org.id}
+                    href={`/admin/colleges/${org.id}`}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-primary/10 p-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{org.name}</p>
+                        <Badge variant="secondary" className="text-xs mt-0.5">
+                          {org.slug}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        {org._count.users}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {org._count.events}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Events across all colleges */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Recent Events</CardTitle>
+            <Link
+              href="/admin"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              View all &rarr;
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No events on the platform yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{event.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {event.org && (
+                          <Badge variant="outline" className="text-xs">
+                            {event.org.name}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(event.startDate).toLocaleDateString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold">{event._count.registrations}</div>
+                      <p className="text-xs text-muted-foreground">registrations</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Check if user is an organizer
-  const isOrganizer = user.role === "ORGANIZER" || user.role === "ADMIN";
+  const isOrganizer = user.role === "ORGANIZER";
 
   // Get user registrations count
   const registrationsCount = await db.registration.count({
@@ -34,6 +287,7 @@ export default async function DashboardPage() {
       registrations: {
         some: {
           userId: user.id,
+          status: { not: "CANCELLED" },
         },
       },
       startDate: {
@@ -82,21 +336,24 @@ export default async function DashboardPage() {
     take: 5,
   });
 
-  // Get organizer's events (if organizer)
+  // Get organizer's org events (if organizer)
   let organizedEvents = null;
   let organizerStats = null;
   if (isOrganizer) {
+    const orgEventFilter = user.orgId
+      ? { orgId: user.orgId }
+      : { organizerId: user.id };
+
     organizedEvents = await db.event.findMany({
-      where: {
-        organizerId: user.id,
-      },
+      where: orgEventFilter,
       include: {
         _count: {
           select: {
-            registrations: true,
+            registrations: { where: { status: { not: "CANCELLED" } } },
           },
         },
         registrations: {
+          where: { status: { not: "CANCELLED" } },
           include: {
             attendance: {
               select: { id: true },
@@ -112,13 +369,14 @@ export default async function DashboardPage() {
 
     // Calculate organizer statistics
     const totalOrganizedEvents = await db.event.count({
-      where: { organizerId: user.id },
+      where: orgEventFilter,
     });
 
     const allOrganizedEvents = await db.event.findMany({
-      where: { organizerId: user.id },
+      where: orgEventFilter,
       include: {
         registrations: {
+          where: { status: { not: "CANCELLED" } },
           include: {
             attendance: {
               select: { id: true },

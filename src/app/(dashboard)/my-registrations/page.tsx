@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import StudentQRDisplay from "@/components/events/student-qr-display";
+import { CancelRegistrationButton } from "@/components/registrations/cancel-registration-button";
 import { QrCode, CheckCircle2, LogIn } from "lucide-react";
 
 export default async function MyRegistrationsPage() {
@@ -110,19 +111,28 @@ export default async function MyRegistrationsPage() {
           <h2 className="text-xl font-semibold">Upcoming Events</h2>
           <div className="space-y-6">
             {upcomingRegistrations.map((reg) => (
-              <StudentQRDisplay
-                key={reg.id}
-                eventTitle={reg.event.title}
-                studentName={user.name}
-                qrCode={reg.qrCode}
-                registrationId={reg.id}
-                attended={!!reg.attendance}
-                attendanceTime={
-                  reg.attendance
-                    ? reg.attendance.checkedInAt.toISOString()
-                    : undefined
-                }
-              />
+              <div key={reg.id} className="space-y-2">
+                <StudentQRDisplay
+                  eventTitle={reg.event.title}
+                  studentName={user.name}
+                  qrCode={reg.qrCode}
+                  registrationId={reg.id}
+                  attended={!!reg.attendance}
+                  attendanceTime={
+                    reg.attendance
+                      ? reg.attendance.checkedInAt.toISOString()
+                      : undefined
+                  }
+                />
+                {!reg.attendance && (
+                  <div className="flex justify-end">
+                    <CancelRegistrationButton
+                      registrationId={reg.id}
+                      eventTitle={reg.event.title}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

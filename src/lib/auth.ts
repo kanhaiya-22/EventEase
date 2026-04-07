@@ -6,6 +6,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validators/auth";
+import { resolveOrgFromEmail } from "@/lib/resolve-org";
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(db),
@@ -55,12 +56,23 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { email: token.email! },
-          select: { id: true, role: true, department: true },
+          select: { id: true, role: true, department: true, orgId: true },
         });
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.department = dbUser.department;
+
+          // Auto-assign org from email domain for OAuth users who don't have one
+          if (!dbUser.orgId && token.email) {
+            const resolved = await resolveOrgFromEmail(token.email);
+            if (resolved) {
+              await db.user.update({
+                where: { id: dbUser.id },
+                data: { orgId: resolved.orgId },
+              });
+            }
+          }
         }
       }
       return token;

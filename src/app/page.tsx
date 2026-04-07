@@ -141,8 +141,11 @@ export default function HomePage() {
             <Link href="/events" className="hover:text-foreground">
               Events
             </Link>
-            <Link href="#features" className="hover:text-foreground">
-              Features
+            <Link href="/about" className="hover:text-foreground">
+              About
+            </Link>
+            <Link href="/contact" className="hover:text-foreground">
+              Contact
             </Link>
           </div>
         </div>

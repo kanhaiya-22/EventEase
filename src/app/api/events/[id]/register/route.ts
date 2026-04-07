@@ -4,14 +4,6 @@ import { auth } from "@/lib/auth";
 import { sendRegistrationConfirmation } from "@/lib/email";
 
 /**
- * Generate a verification code for certificate
- */
-function generateVerificationCode(): string {
-  return Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15);
-}
-
-/**
  * POST /api/events/[id]/register
  * Register a user for an event
  */
@@ -46,12 +38,15 @@ export async function POST(
         organizer: {
           select: { id: true },
         },
+        org: {
+          select: { name: true },
+        },
         registrations: {
-          where: { userId: user.id },
+          where: { userId: user.id, status: { not: "CANCELLED" } },
         },
         _count: {
           select: {
-            registrations: true,
+            registrations: { where: { status: { not: "CANCELLED" } } },
           },
         },
       },
@@ -92,45 +87,65 @@ export async function POST(
     const body = await request.json();
     const { formData } = body;
 
-    // Create registration and certificate in a transaction
-    const registration = await db.registration.create({
-      data: {
-        userId: user.id,
-        eventId: id,
-        formData: formData || {},
-        status: "CONFIRMED",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-            startDate: true,
-          },
-        },
-      },
+    // Check if there's a cancelled registration to reactivate
+    const cancelledRegistration = await db.registration.findFirst({
+      where: { userId: user.id, eventId: id, status: "CANCELLED" },
     });
 
-    // Create a certificate record for the user
-    // The actual certificate file will be generated when the event is completed
-    try {
-      await db.certificate.create({
+    let registration;
+    if (cancelledRegistration) {
+      // Reactivate the cancelled registration
+      registration = await db.registration.update({
+        where: { id: cancelledRegistration.id },
+        data: {
+          status: "CONFIRMED",
+          formData: formData || cancelledRegistration.formData || {},
+          registeredAt: new Date(),
+          cancelledAt: null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          event: {
+            select: {
+              id: true,
+              title: true,
+              startDate: true,
+            },
+          },
+        },
+      });
+    } else {
+      // Create new registration
+      registration = await db.registration.create({
         data: {
           userId: user.id,
           eventId: id,
-          verificationCode: generateVerificationCode(),
+          formData: formData || {},
+          status: "CONFIRMED",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          event: {
+            select: {
+              id: true,
+              title: true,
+              startDate: true,
+            },
+          },
         },
       });
-    } catch (certError) {
-      // If certificate already exists, that's fine
-      console.log("Certificate already exists for this user-event combination");
     }
 
     // Send registration confirmation email
@@ -138,7 +153,14 @@ export async function POST(
       await sendRegistrationConfirmation(
         registration.user.email,
         registration.user.name || "User",
-        registration.event.title
+        registration.event.title,
+        {
+          startDate: event.startDate,
+          endDate: event.endDate,
+          venue: event.venue,
+          category: event.category,
+        },
+        event.org?.name
       );
     } catch (emailError) {
       console.error("Error sending registration confirmation email:", emailError);

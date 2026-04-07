@@ -25,6 +25,19 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
+    // Scope to user's organization if logged in and has one
+    const session = await auth();
+    if (session?.user?.email) {
+      const user = await db.user.findUnique({
+        where: { email: session.user.email },
+        select: { orgId: true, role: true },
+      });
+      // Admin sees everything; others see only their org's events
+      if (user?.orgId && user.role !== "ADMIN") {
+        where.orgId = user.orgId;
+      }
+    }
+
     const [events, total] = await Promise.all([
       db.event.findMany({
         where,
@@ -49,7 +62,7 @@ export async function GET(request: NextRequest) {
           },
           _count: {
             select: {
-              registrations: true,
+              registrations: { where: { status: { not: "CANCELLED" } } },
             },
           },
         },
@@ -169,26 +182,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate slug
-    const slug = title
+    // Generate unique slug
+    const baseSlug = title
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "")
       .substring(0, 50);
 
-    // Check if slug already exists
-    const existingEvent = await db.event.findUnique({
-      where: { slug },
-    });
-
-    if (existingEvent) {
-      return NextResponse.json(
-        {
-          error:
-            "An event with this title already exists. Please use a different title.",
-        },
-        { status: 409 }
-      );
+    let slug = baseSlug;
+    let suffix = 1;
+    while (await db.event.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
     }
 
     const event = await db.event.create({

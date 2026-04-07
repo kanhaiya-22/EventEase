@@ -8,9 +8,10 @@ import { auth } from "@/lib/auth";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -29,7 +30,7 @@ export async function GET(
     }
 
     const certificate = await db.certificate.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         event: {
           select: {
@@ -91,9 +92,10 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -115,7 +117,7 @@ export async function DELETE(
     }
 
     const certificate = await db.certificate.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!certificate) {
@@ -126,7 +128,7 @@ export async function DELETE(
     }
 
     await db.certificate.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json(

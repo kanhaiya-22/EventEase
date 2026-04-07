@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BarChart3, CheckCircle2, Calendar } from "lucide-react";
+import { Users, BarChart3, CheckCircle2, Calendar, Copy } from "lucide-react";
+import { EventStatusDropdown } from "@/components/events/event-status-dropdown";
+import { DuplicateEventButton } from "@/components/events/duplicate-event-button";
 
 export default async function OrganizedEventsPage() {
   const session = await auth();
@@ -12,19 +14,31 @@ export default async function OrganizedEventsPage() {
     redirect("/login");
   }
 
+  const user = await db.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, orgId: true, org: { select: { name: true } } },
+  });
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Show events from the organizer's entire organization (not just their own)
   const events = await db.event.findMany({
-    where: {
-      organizer: {
-        email: session.user.email,
-      },
-    },
+    where: user.orgId
+      ? { orgId: user.orgId }
+      : { organizer: { email: session.user.email } },
     include: {
+      organizer: {
+        select: { id: true, name: true },
+      },
       _count: {
         select: {
-          registrations: true,
+          registrations: { where: { status: { not: "CANCELLED" } } },
         },
       },
       registrations: {
+        where: { status: { not: "CANCELLED" } },
         include: {
           attendance: {
             select: { id: true },
@@ -53,9 +67,13 @@ export default async function OrganizedEventsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Your Events</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {user.org?.name ? `${user.org.name} Events` : "Your Events"}
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Manage and view all events you've organized
+          {user.org?.name
+            ? `All events organized by ${user.org.name}`
+            : "Manage and view all events you've organized"}
         </p>
       </div>
 
@@ -171,15 +189,10 @@ export default async function OrganizedEventsPage() {
                           )}
                         </p>
                       </div>
-                      {isUpcoming ? (
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                          Upcoming
-                        </span>
-                      ) : (
-                        <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded">
-                          Completed
-                        </span>
-                      )}
+                      <EventStatusDropdown
+                        eventId={event.id}
+                        currentStatus={event.status}
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -249,6 +262,7 @@ export default async function OrganizedEventsPage() {
                         >
                           Edit
                         </Link>
+                        <DuplicateEventButton eventId={event.id} />
                       </div>
                     </div>
                   </CardContent>

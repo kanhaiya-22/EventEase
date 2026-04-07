@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { ietLucknowEvents } from "@/lib/data/iet-events";
 
@@ -47,6 +48,24 @@ export async function POST(request: NextRequest) {
           role: "ORGANIZER",
           department: "Administration",
           orgId: organization.id,
+        },
+      });
+    }
+
+    // Get or create super admin
+    let admin = await db.user.findFirst({
+      where: { email: "superadmin@eventease.dev" },
+    });
+
+    if (!admin) {
+      const passwordHash = await bcrypt.hash("Admin@123", 12);
+      admin = await db.user.create({
+        data: {
+          name: "Super Admin",
+          email: "superadmin@eventease.dev",
+          passwordHash,
+          role: "ADMIN",
+          department: "Administration",
         },
       });
     }
@@ -128,6 +147,12 @@ export async function POST(request: NextRequest) {
           id: organizer.id,
           name: organizer.name,
           email: organizer.email,
+        },
+        admin: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role,
         },
         results,
       },

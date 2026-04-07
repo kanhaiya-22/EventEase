@@ -3,8 +3,11 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Users, Calendar, Award, Ticket } from "lucide-react";
+import Link from "next/link";
 
-export default async function AdminDashboard() {
+export default async function AdminPanel() {
   const session = await auth();
 
   if (!session?.user?.email) {
@@ -19,86 +22,106 @@ export default async function AdminDashboard() {
     redirect("/");
   }
 
-  // Get statistics
-  const totalEvents = await db.event.count({
-    where:
-      user.role === "ADMIN"
-        ? {}
-        : {
-            organizerId: user.id,
-          },
-  });
+  const isAdmin = user.role === "ADMIN";
+  const eventWhere = isAdmin
+    ? {}
+    : user.orgId
+      ? { orgId: user.orgId }
+      : { organizerId: user.id };
+  const regWhere = isAdmin
+    ? {}
+    : user.orgId
+      ? { event: { orgId: user.orgId } }
+      : { event: { organizerId: user.id } };
 
-  const totalRegistrations = await db.registration.count({
-    where:
-      user.role === "ADMIN"
-        ? {}
-        : {
-            event: {
-              organizerId: user.id,
-            },
-          },
-  });
+  const [totalEvents, totalRegistrations, totalCertificates, upcomingEvents] =
+    await Promise.all([
+      db.event.count({ where: eventWhere }),
+      db.registration.count({ where: regWhere }),
+      db.certificate.count({ where: regWhere }),
+      db.event.count({
+        where: { ...eventWhere, startDate: { gte: new Date() } },
+      }),
+    ]);
 
-  const totalCertificates = await db.certificate.count({
-    where:
-      user.role === "ADMIN"
-        ? {}
-        : {
-            event: {
-              organizerId: user.id,
-            },
-          },
-  });
-
-  const upcomingEvents = await db.event.count({
-    where: {
-      ...(user.role === "ADMIN"
-        ? {}
-        : {
-            organizerId: user.id,
-          }),
-      startDate: {
-        gte: new Date(),
-      },
+  // Recent events with registration counts
+  const recentEvents = await db.event.findMany({
+    where: eventWhere,
+    include: {
+      organizer: { select: { name: true } },
+      org: { select: { name: true } },
+      _count: { select: { registrations: { where: { status: { not: "CANCELLED" } } } } },
     },
+    orderBy: { createdAt: "desc" },
+    take: 10,
   });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PUBLISHED":
+        return "bg-green-100 text-green-800";
+      case "ONGOING":
+        return "bg-blue-100 text-blue-800";
+      case "COMPLETED":
+        return "bg-gray-100 text-gray-800";
+      case "DRAFT":
+        return "bg-yellow-100 text-yellow-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage events, registrations, and certificates
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isAdmin ? "All Events" : "Events Management"}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isAdmin
+              ? "Platform-wide event oversight and management"
+              : "Manage your events, registrations, and certificates"}
+          </p>
+        </div>
+        {!isAdmin && (
+          <Link href="/events/create">
+            <Button>Create Event</Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Events
             </CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalEvents}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Registrations
+              Registrations
             </CardTitle>
+            <Ticket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalRegistrations}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Certificates Issued
+              Certificates
             </CardTitle>
+            <Award className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
@@ -107,10 +130,11 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Upcoming Events
+              Upcoming
             </CardTitle>
+            <Calendar className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
@@ -120,41 +144,99 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <a href="/admin/events" className="block">
-            <Button className="w-full">Manage Events</Button>
-          </a>
-          <p className="text-sm text-muted-foreground">
-            View and manage all your events, registrations, and certificates.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Events Table */}
+      {recentEvents.length === 0 ? (
+        <Card>
+          <CardContent className="pt-8 text-center">
+            <p className="text-muted-foreground">No events yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Event
+                  </th>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-sm font-semibold">
+                      College
+                    </th>
+                  )}
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Registrations
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentEvents.map((event) => (
+                  <tr key={event.id} className="border-t hover:bg-muted/50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium">{event.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          by {event.organizer.name}
+                        </p>
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {event.org?.name || "—"}
+                      </td>
+                    )}
+                    <td className="px-6 py-4">
+                      <Badge className={getStatusColor(event.status)}>
+                        {event.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {new Date(event.startDate).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold">
+                        {event._count.registrations}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-1">
+                        <Link href={`/admin/events/${event.id}/registrations`}>
+                          <Button variant="ghost" size="sm" title="Registrations">
+                            <Users className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/events/${event.id}/certificates`}>
+                          <Button variant="ghost" size="sm" title="Certificates">
+                            <Award className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div>
-            <h3 className="font-semibold text-sm mb-2">Certificate Management</h3>
-            <p className="text-sm text-muted-foreground">
-              Certificates are automatically created when students register for events. Once an event is completed, you can view and manage certificates in the event's certificate management section.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-sm mb-2">Registration Status</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• <strong>CONFIRMED</strong> - Student has registered for the event</li>
-              <li>• <strong>WAITLISTED</strong> - Event is full, student is on waitlist</li>
-              <li>• <strong>CANCELLED</strong> - Registration has been cancelled</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+      {recentEvents.length >= 10 && (
+        <div className="text-center">
+          <Link href="/admin/events">
+            <Button variant="outline">View All Events</Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

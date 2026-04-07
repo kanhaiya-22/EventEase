@@ -12,9 +12,18 @@ import {
   LogOut,
   Menu,
   X,
+  Ticket,
+  QrCode,
+  ListTodo,
+  User,
+  Bell,
+  Copy,
+  Download,
+  Building2,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { dashboardNav } from "@/lib/nav-items";
@@ -26,6 +35,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   PlusCircle,
   Award,
   Shield,
+  Ticket,
+  QrCode,
+  ListTodo,
+  User,
+  Bell,
+  Copy,
+  Download,
+  Building2,
 };
 
 export function Sidebar() {
@@ -80,6 +97,7 @@ export function Sidebar() {
             <p className="text-sm font-medium truncate">{session?.user?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{userRole}</p>
           </div>
+          <NotificationBell />
           <Button
             variant="ghost"
             size="icon"

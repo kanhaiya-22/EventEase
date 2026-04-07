@@ -13,6 +13,7 @@ export interface ImportEventInput {
   capacity: number;
   posterUrl?: string;
   organizerId: string;
+  orgId?: string;
 }
 
 /**
@@ -24,25 +25,28 @@ export async function bulkImportEvents(events: ImportEventInput[]) {
 
     for (const eventData of events) {
       try {
-        // Generate slug
-        const slug = eventData.title
+        // Generate unique slug
+        const baseSlug = eventData.title
           .toLowerCase()
           .replace(/\s+/g, "-")
           .replace(/[^\w-]/g, "")
           .substring(0, 50);
 
-        // Check if slug exists
-        const existingEvent = await db.event.findUnique({
-          where: { slug },
-        });
+        let slug = baseSlug;
+        let suffix = 1;
+        while (await db.event.findUnique({ where: { slug } })) {
+          slug = `${baseSlug}-${suffix}`;
+          suffix++;
+        }
 
-        if (existingEvent) {
-          results.push({
-            title: eventData.title,
-            status: "skipped",
-            reason: "Event with similar title already exists",
+        // Resolve orgId from organizer if not provided
+        let orgId = eventData.orgId;
+        if (!orgId) {
+          const organizer = await db.user.findUnique({
+            where: { id: eventData.organizerId },
+            select: { orgId: true },
           });
-          continue;
+          orgId = organizer?.orgId ?? undefined;
         }
 
         const event = await db.event.create({
@@ -58,6 +62,7 @@ export async function bulkImportEvents(events: ImportEventInput[]) {
             capacity: eventData.capacity,
             posterUrl: eventData.posterUrl,
             organizerId: eventData.organizerId,
+            orgId: orgId || undefined,
             status: "PUBLISHED",
           },
         });
@@ -188,23 +193,18 @@ export async function createEvent(formData: {
       };
     }
 
-    // Generate slug
-    const slug = formData.title
+    // Generate unique slug
+    const baseSlug = formData.title
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^\w-]/g, "")
       .substring(0, 50);
 
-    // Check if slug already exists
-    const existingEvent = await db.event.findUnique({
-      where: { slug },
-    });
-
-    if (existingEvent) {
-      return {
-        success: false,
-        error: "An event with this title already exists. Please use a different title.",
-      };
+    let slug = baseSlug;
+    let suffix = 1;
+    while (await db.event.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
     }
 
     const event = await db.event.create({

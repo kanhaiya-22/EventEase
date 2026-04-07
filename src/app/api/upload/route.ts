@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           public_id: `${Date.now()}-${file.name.replace(/\s+/g, "-").split(".")[0]}`,
           quality: type === "document" ? undefined : 80,
           // Ensure documents are publicly accessible
-          ...(type === "document" && { access_mode: "token" }),
+          ...(type === "document" && { access_mode: "public" }),
           ...(file.type.startsWith("video/") && {
             eager: [{ width: 300, height: 300, crop: "fill" }],
           }),

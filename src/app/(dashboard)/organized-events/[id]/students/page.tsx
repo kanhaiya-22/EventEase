@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle } from "lucide-react";
 import DeleteRegistrationButton from "@/components/registrations/delete-registration-button";
 import IssueCertificatesForm from "@/components/certificates/issue-certificates-form";
+import { ExportCSVButton } from "@/components/events/export-csv-button";
 
 interface StudentsPageProps {
   params: Promise<{
@@ -32,6 +33,7 @@ export default async function StudentsPage({
         select: { id: true, email: true },
       },
       registrations: {
+        where: { status: { not: "CANCELLED" } },
         include: {
           user: {
             select: {
@@ -162,7 +164,10 @@ export default async function StudentsPage({
       {/* Students Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Student List</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Student List</CardTitle>
+            <ExportCSVButton eventId={id} />
+          </div>
         </CardHeader>
         <CardContent>
           {totalRegistrations === 0 ? (
@@ -261,12 +266,12 @@ export default async function StudentsPage({
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Issue Certificates</h2>
           <p className="text-muted-foreground">
-            Select students who attended the event to issue them certificates
+            Select present students to issue them certificates
           </p>
           <IssueCertificatesForm
             eventId={event.id}
             eventTitle={event.title}
-            attendedStudents={event.registrations.filter((reg) => reg.attendance)}
+            registeredStudents={event.registrations.filter((reg) => reg.status === "CONFIRMED" && reg.attendance)}
           />
         </div>
       )}

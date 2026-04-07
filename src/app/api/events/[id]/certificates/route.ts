@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { sendCertificateEmail } from "@/lib/email";
 
 /**
  * Generate a unique verification code for certificate
@@ -54,6 +55,9 @@ export async function POST(
         organizer: {
           select: { id: true, email: true },
         },
+        org: {
+          select: { name: true },
+        },
       },
     });
 
@@ -69,7 +73,7 @@ export async function POST(
       );
     }
 
-    // Check if students are actually registered and attended
+    // Only students who are registered AND marked present
     const registrations = await db.registration.findMany({
       where: {
         eventId: id,
@@ -78,9 +82,8 @@ export async function POST(
             in: studentIds,
           },
         },
-        attendance: {
-          isNot: null,
-        },
+        status: "CONFIRMED",
+        attendance: { isNot: null },
       },
       include: {
         user: {
@@ -95,7 +98,7 @@ export async function POST(
 
     if (registrations.length === 0) {
       return NextResponse.json(
-        { error: "No valid attended students found" },
+        { error: "No valid students found. Only students marked present can receive certificates." },
         { status: 400 }
       );
     }
@@ -138,12 +141,30 @@ export async function POST(
           certificateId: certificate.id,
           studentName: registration.user.name,
           studentEmail: registration.user.email,
+          certificateUrl,
         });
       } catch (error) {
         console.error(
           `Error creating certificate for student ${registration.user.id}:`,
           error
         );
+      }
+    }
+
+    // Send certificate email to each student
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+    for (const cert of createdCertificates) {
+      try {
+        const downloadUrl = `${appUrl}${cert.certificateUrl}`;
+        await sendCertificateEmail(
+          cert.studentEmail,
+          cert.studentName || "Student",
+          event.title,
+          downloadUrl,
+          event.org?.name
+        );
+      } catch (emailError) {
+        console.error(`Error sending certificate email to ${cert.studentEmail}:`, emailError);
       }
     }
 

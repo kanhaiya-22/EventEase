@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { registerSchema, type RegisterInput } from "@/lib/validators/auth";
+import { resolveOrgFromEmail } from "@/lib/resolve-org";
 
 export async function registerUser(data: RegisterInput) {
   const parsed = registerSchema.safeParse(data);
@@ -23,23 +24,11 @@ export async function registerUser(data: RegisterInput) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // If registering as ORGANIZER, assign to default organization
+  // Resolve organization from email domain (works for ALL roles)
   let orgId: string | undefined = undefined;
-  if (role === "ORGANIZER") {
-    // Get or create default organization
-    let org = await db.organization.findFirst({
-      where: { name: "IET Lucknow" },
-    });
-
-    if (!org) {
-      org = await db.organization.create({
-        data: {
-          name: "IET Lucknow",
-          slug: "iet-lucknow",
-        },
-      });
-    }
-    orgId = org.id;
+  const resolved = await resolveOrgFromEmail(email);
+  if (resolved) {
+    orgId = resolved.orgId;
   }
 
   await db.user.create({

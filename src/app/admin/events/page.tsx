@@ -22,14 +22,14 @@ export default async function AdminEventsPage() {
     redirect("/");
   }
 
-  // Get events organized by user or all events if admin
+  // Admin sees all; organizers see their org's events
   const events = await db.event.findMany({
     where:
       user.role === "ADMIN"
         ? {}
-        : {
-            organizerId: user.id,
-          },
+        : user.orgId
+          ? { orgId: user.orgId }
+          : { organizerId: user.id },
     include: {
       organizer: {
         select: {
@@ -40,7 +40,7 @@ export default async function AdminEventsPage() {
       },
       _count: {
         select: {
-          registrations: true,
+          registrations: { where: { status: { not: "CANCELLED" } } },
         },
       },
     },

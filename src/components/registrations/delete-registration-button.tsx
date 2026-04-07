@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { deleteRegistration } from "@/lib/actions/registrations";
 import { Trash2, Loader, AlertCircle, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface DeleteRegistrationButtonProps {
   registrationId: string;
@@ -19,6 +21,7 @@ export default function DeleteRegistrationButton({
 }: DeleteRegistrationButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const router = useRouter();
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -26,13 +29,14 @@ export default function DeleteRegistrationButton({
       const result = await deleteRegistration(registrationId, eventId);
 
       if (result.success) {
-        alert(`✓ ${result.message}`);
+        toast.success(result.message);
         setShowDialog(false);
+        router.refresh();
       } else {
-        alert(`❌ ${result.error}`);
+        toast.error(result.error);
       }
     } catch (error) {
-      alert("❌ Error deleting registration");
+      toast.error("Error deleting registration");
       console.error(error);
     } finally {
       setIsDeleting(false);
