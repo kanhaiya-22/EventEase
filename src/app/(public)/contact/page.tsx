@@ -41,7 +41,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold">Email</h3>
                     <p className="text-muted-foreground text-sm mt-1">
-                      support@eventease.college
+                      2200521520026@ietlucknow.ac.in
                     </p>
                     <p className="text-muted-foreground text-sm">
                       For technical issues and general inquiries.
@@ -160,7 +160,7 @@ export default function ContactPage() {
 function ContactForm() {
   return (
     <form
-      action="https://formsubmit.co/support@eventease.college"
+      action="https://formsubmit.co/2200521520026@ietlucknow.ac.in"
       method="POST"
       className="space-y-4"
     >
