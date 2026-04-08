@@ -42,6 +42,11 @@ export const dashboardNav: NavItem[] = [
     roles: ["STUDENT"],
   },
   {
+    title: "Announcements",
+    href: "/announcements",
+    icon: "Megaphone",
+  },
+  {
     title: "Notifications",
     href: "/notifications",
     icon: "Bell",

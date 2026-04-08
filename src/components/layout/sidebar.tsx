@@ -20,6 +20,7 @@ import {
   Copy,
   Download,
   Building2,
+  Megaphone,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
@@ -43,6 +44,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Copy,
   Download,
   Building2,
+  Megaphone,
 };
 
 export function Sidebar() {

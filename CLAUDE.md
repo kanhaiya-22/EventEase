@@ -79,6 +79,8 @@ src/
 │       ├── attendance/            # QR verify + self-checkin
 │       ├── certificates/          # CRUD + download
 │       ├── notifications/         # GET list, PATCH mark-read, POST mark-all-read
+│       ├── announcements/         # CRUD + comments + reactions
+│       ├── comments/              # Edit + delete + reactions
 │       ├── upload/                # Cloudinary upload
 │       ├── documents/download/    # Document download
 │       └── seed/                  # Database seeding
@@ -89,6 +91,7 @@ src/
 │   ├── certificates/              # issue-certificates-form
 │   ├── registrations/             # delete-registration-button, cancel-registration-button
 │   ├── notifications/             # notification-list
+│   ├── announcements/             # announcement-card, announcement-form, announcement-list, announcement-detail, comment-section, reaction-button
 │   ├── profile/                   # profile-form
 │   ├── providers.tsx              # SessionProvider + QueryClientProvider
 │   └── logo.tsx
@@ -133,6 +136,10 @@ Schema in `prisma/schema.prisma`:
 - **CertTemplate** — Certificate template (templateData JSON, orgId)
 - **Certificate** — Issued cert (certificateUrl, verificationCode UUID). Unique: (userId, eventId)
 - **Notification** — In-app alerts (type enum, isRead). Indexed: (userId, isRead)
+- **Announcement** — Org-wide posts (title, content, isPinned, authorId, orgId, eventId?). Indexed: (orgId, createdAt)
+- **Comment** — Threaded comments on announcements (content, authorId, announcementId, parentId?). Indexed: (announcementId, createdAt)
+- **AnnouncementReaction** — Emoji reactions on announcements. Unique: (userId, announcementId, emoji)
+- **CommentReaction** — Emoji reactions on comments. Unique: (userId, commentId, emoji)
 
 ### Enums
 - `Role`: STUDENT, ORGANIZER, ADMIN
@@ -171,6 +178,12 @@ Schema in `prisma/schema.prisma`:
 | GET | `/api/events/[id]/export-csv` | Download registrations CSV |
 | POST | `/api/upload` | Cloudinary file upload |
 | GET | `/api/documents/download` | Download event documents |
+| GET/POST | `/api/announcements` | List/create announcements |
+| GET/PUT/DELETE | `/api/announcements/[id]` | Announcement CRUD |
+| POST | `/api/announcements/[id]/comments` | Add comment/reply |
+| POST | `/api/announcements/[id]/reactions` | Toggle emoji reaction |
+| PUT/DELETE | `/api/comments/[id]` | Edit/delete comment |
+| POST | `/api/comments/[id]/reactions` | Toggle comment reaction |
 | POST | `/api/seed` | Seed database |
 
 ## Conventions
@@ -213,6 +226,7 @@ Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `CLOUDIN
 - **Duplicate event** — clone events as DRAFT for recurring use
 - **Certificate verification** — public `/verify/[code]` page
 - **Toast notifications** — sonner replaces all alert() calls
+- **Announcements & Discussion** — Org-wide announcement board with threaded comments, emoji reactions, pin/unpin, event linking, edit/delete, notification integration
 
 ## Known Incomplete Areas
 - `src/hooks/` — Empty, no custom hooks yet
