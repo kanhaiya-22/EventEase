@@ -21,6 +21,7 @@ import {
   Download,
   Building2,
   Megaphone,
+  UserCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
@@ -45,6 +46,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Download,
   Building2,
   Megaphone,
+  UserCheck,
 };
 
 export function Sidebar() {
@@ -66,7 +68,16 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 p-3">
         {filteredNav.map((item) => {
           const Icon = item.icon ? iconMap[item.icon] : null;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          // Exact match, or starts-with but only if no other nav item is a closer match
+          const isActive =
+            pathname === item.href ||
+            (pathname.startsWith(item.href + "/") &&
+              !filteredNav.some(
+                (other) =>
+                  other.href !== item.href &&
+                  other.href.startsWith(item.href + "/") &&
+                  (pathname === other.href || pathname.startsWith(other.href + "/"))
+              ));
 
           return (
             <Link

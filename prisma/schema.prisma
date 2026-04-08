@@ -59,7 +59,16 @@ enum NotificationType {
   CERTIFICATE_READY
   ANNOUNCEMENT_POSTED
   ANNOUNCEMENT_COMMENT
+  ORGANIZER_REQUEST
+  ORGANIZER_APPROVED
+  ORGANIZER_REJECTED
   GENERAL
+}
+
+enum OrganizerRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ─── Models ──────────────────────────────────────────────
@@ -94,6 +103,7 @@ model User {
   avatarUrl     String?
   emailVerified DateTime?
   isActive      Boolean   @default(true)
+  isVerified    Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -112,6 +122,8 @@ model User {
   comments              Comment[]              @relation("CommentAuthor")
   announcementReactions AnnouncementReaction[]
   commentReactions      CommentReaction[]
+  organizerRequest      OrganizerRequest?      @relation("OrganizerRequestUser")
+  reviewedRequests      OrganizerRequest[]     @relation("OrganizerRequestReviewer")
 
   @@map("users")
 }
@@ -268,6 +280,29 @@ model Notification {
 
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+// ─── Organizer Verification ─────────────────────────────
+
+model OrganizerRequest {
+  id              String                 @id @default(cuid())
+  status          OrganizerRequestStatus @default(PENDING)
+  collegeName     String
+  designation     String
+  organizationWeb String?
+  reason          String                 @db.Text
+  rejectionReason String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  reviewedAt      DateTime?
+
+  userId     String @unique
+  user       User   @relation("OrganizerRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewerId String?
+  reviewer   User?  @relation("OrganizerRequestReviewer", fields: [reviewerId], references: [id])
+
+  @@index([status])
+  @@map("organizer_requests")
 }
 
 // ─── Announcements & Discussions ────────────────────────

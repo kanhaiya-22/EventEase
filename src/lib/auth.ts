@@ -42,6 +42,11 @@ export const authConfig: NextAuthConfig = {
         );
         if (!isValid) return null;
 
+        // Block unverified organizers from logging in
+        if (user.role === "ORGANIZER" && !user.isVerified) {
+          return null;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -52,16 +57,17 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, trigger }) {
+      if (user || trigger === "update") {
         const dbUser = await db.user.findUnique({
           where: { email: token.email! },
-          select: { id: true, role: true, department: true, orgId: true },
+          select: { id: true, role: true, department: true, orgId: true, isVerified: true },
         });
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.department = dbUser.department;
+          token.isVerified = dbUser.isVerified;
 
           // Auto-assign org from email domain for OAuth users who don't have one
           if (!dbUser.orgId && token.email) {
@@ -84,6 +90,7 @@ export const authConfig: NextAuthConfig = {
         user.id = token.id;
         user.role = token.role;
         user.department = token.department;
+        user.isVerified = token.isVerified;
       }
       return session;
     },

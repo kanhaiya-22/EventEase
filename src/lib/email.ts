@@ -273,6 +273,102 @@ export async function sendEventReminder(
 }
 
 /**
+ * Send organizer approval email
+ */
+export async function sendOrganizerApprovalEmail(
+  email: string,
+  name: string
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">EventEase</h2>
+          </div>
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Account Verified!</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <p>Hello ${name},</p>
+            <p>Great news! Your organizer account on <strong>EventEase</strong> has been verified by an admin.</p>
+            <p>You can now log in and start creating and managing events on the platform.</p>
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; padding: 14px 35px; background: #10b981; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Log In Now</a>
+            </div>
+            <p>As an organizer, you can:</p>
+            <ul>
+              <li>Create and manage events</li>
+              <li>Track registrations and attendance</li>
+              <li>Issue certificates to participants</li>
+              <li>Post announcements for your events</li>
+            </ul>
+          </div>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 EventEase</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Your Organizer Account Has Been Verified - EventEase",
+    html,
+  });
+}
+
+/**
+ * Send organizer rejection email
+ */
+export async function sendOrganizerRejectionEmail(
+  email: string,
+  name: string,
+  reason?: string
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">EventEase</h2>
+          </div>
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">Organizer Request Update</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <p>Hello ${name},</p>
+            <p>We regret to inform you that your organizer account request on <strong>EventEase</strong> has not been approved at this time.</p>
+            ${reason ? `
+            <div style="background: white; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0;"><strong>Reason:</strong> ${reason}</p>
+            </div>` : ""}
+            <p>You can still use EventEase as a student to browse events and register for them. If you believe this decision was made in error, please reach out to the platform administrator.</p>
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="display: inline-block; padding: 14px 35px; background: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">Browse Events</a>
+            </div>
+          </div>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 EventEase</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Organizer Request Update - EventEase",
+    html,
+  });
+}
+
+/**
  * Send registration cancellation confirmation email
  */
 export async function sendRegistrationCancellation(

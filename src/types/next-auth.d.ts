@@ -9,6 +9,7 @@ declare module "next-auth" {
       image?: string;
       role: "STUDENT" | "ORGANIZER" | "ADMIN";
       department?: string;
+      isVerified: boolean;
     };
   }
 }
@@ -18,5 +19,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: "STUDENT" | "ORGANIZER" | "ADMIN";
     department?: string;
+    isVerified: boolean;
   }
 }

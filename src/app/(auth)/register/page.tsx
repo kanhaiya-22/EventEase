@@ -38,6 +38,13 @@ export default function RegisterPage() {
       role,
       department: (formData.get("department") as string) || undefined,
       year: (formData.get("year") as string) || undefined,
+      // Organizer-specific fields
+      ...(role === "ORGANIZER" && {
+        collegeName: formData.get("collegeName") as string,
+        designation: formData.get("designation") as string,
+        organizationWeb: (formData.get("organizationWeb") as string) || "",
+        reason: formData.get("reason") as string,
+      }),
     };
 
     const parsed = registerSchema.safeParse(data);
@@ -54,7 +61,13 @@ export default function RegisterPage() {
       return;
     }
 
-    // Auto-login after registration
+    if (role === "ORGANIZER") {
+      // Organizers go to pending verification page (no auto-login)
+      router.push("/verification-pending");
+      return;
+    }
+
+    // Auto-login after registration (students only)
     await signIn("credentials", {
       email: data.email,
       password: data.password,
@@ -141,6 +154,56 @@ export default function RegisterPage() {
               <Input id="year" name="year" placeholder="e.g. 4th" />
             </div>
           </div>
+
+          {role === "ORGANIZER" && (
+            <>
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Organizer accounts require admin verification. You&apos;ll receive an email once approved.
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="collegeName">College / Organization Name *</Label>
+                <Input
+                  id="collegeName"
+                  name="collegeName"
+                  placeholder="e.g. IET Lucknow"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="designation">Designation / Role *</Label>
+                <Input
+                  id="designation"
+                  name="designation"
+                  placeholder="e.g. Event Coordinator, Faculty, Club Head"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organizationWeb">Organization Website</Label>
+                <Input
+                  id="organizationWeb"
+                  name="organizationWeb"
+                  type="url"
+                  placeholder="https://example.edu (optional)"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reason">Why do you want to be an organizer? *</Label>
+                <textarea
+                  id="reason"
+                  name="reason"
+                  rows={3}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  placeholder="Describe your event management experience and what you plan to organize..."
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>

@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { loginSchema } from "@/lib/validators/auth";
+import { checkOrganizerVerification } from "@/lib/actions/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,7 +46,13 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
+      // Check if login failed because organizer is not yet verified
+      const verification = await checkOrganizerVerification(email);
+      if (verification.pending) {
+        setError("Your organizer account is pending verification. You'll receive an email once approved by an admin.");
+      } else {
+        setError("Invalid email or password");
+      }
       setLoading(false);
       return;
     }

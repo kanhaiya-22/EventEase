@@ -63,6 +63,12 @@ export const dashboardNav: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
+    title: "Organizer Requests",
+    href: "/admin/organizer-requests",
+    icon: "UserCheck",
+    roles: ["ADMIN"],
+  },
+  {
     title: "Admin Panel",
     href: "/admin",
     icon: "Shield",
