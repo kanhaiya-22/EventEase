@@ -11,8 +11,8 @@ const VALID_TRANSITIONS: Record<string, EventStatus[]> = {
   PUBLISHED: ["ONGOING", "CANCELLED"],
   ONGOING: ["COMPLETED", "CANCELLED"],
   COMPLETED: ["ARCHIVED"],
-  CANCELLED: [],
-  ARCHIVED: [],
+  CANCELLED: ["DRAFT"],
+  ARCHIVED: ["PUBLISHED"],
 };
 
 export async function updateEventStatus(eventId: string, newStatus: EventStatus) {

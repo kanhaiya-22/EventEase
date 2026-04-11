@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import StudentQRDisplay from "@/components/events/student-qr-display";
 import { CancelRegistrationButton } from "@/components/registrations/cancel-registration-button";
+import { EventStatusBadge } from "@/components/events/event-status-badge";
 import { QrCode, CheckCircle2, LogIn } from "lucide-react";
 
 export default async function MyRegistrationsPage() {
@@ -32,6 +33,7 @@ export default async function MyRegistrationsPage() {
           title: true,
           startDate: true,
           venue: true,
+          status: true,
         },
       },
       attendance: true,
@@ -112,6 +114,10 @@ export default async function MyRegistrationsPage() {
           <div className="space-y-6">
             {upcomingRegistrations.map((reg) => (
               <div key={reg.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Event status:</span>
+                  <EventStatusBadge status={reg.event.status} size="sm" />
+                </div>
                 <StudentQRDisplay
                   eventTitle={reg.event.title}
                   studentName={user.name}
@@ -146,7 +152,7 @@ export default async function MyRegistrationsPage() {
             {pastRegistrations.map((reg) => (
               <Card key={reg.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <CardTitle className="text-lg">{reg.event.title}</CardTitle>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -155,16 +161,19 @@ export default async function MyRegistrationsPage() {
                         )}
                       </p>
                     </div>
-                    {reg.attendance ? (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Attended
-                      </div>
-                    ) : (
-                      <div className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                        Not Attended
-                      </div>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      <EventStatusBadge status={reg.event.status} size="sm" />
+                      {reg.attendance ? (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Attended
+                        </div>
+                      ) : (
+                        <div className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                          Not Attended
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

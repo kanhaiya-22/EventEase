@@ -1,9 +1,11 @@
-@AGENTS.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 # EventEase — College Event Management Platform
 
 ## Project Overview
-A unified platform for managing the full college event lifecycle: creation, registration, QR attendance, certificate generation, and analytics. Built for IET Lucknow (default org) with multi-college support.
+A unified platform for managing the full college event lifecycle: creation, registration, QR attendance, certificate generation, announcements, and analytics. Built for IET Lucknow (default org) with multi-college support — new colleges are auto-provisioned from a user's email domain via [src/lib/college-domain-map.ts](src/lib/college-domain-map.ts) + [src/lib/resolve-org.ts](src/lib/resolve-org.ts).
 
 ## Quick Start
 
@@ -39,6 +41,7 @@ npm run dev                    # localhost:3000
 - **PDF:** @react-pdf/renderer (certificate generation)
 - **QR:** qrcode (server generation), html5-qrcode (client scanning)
 - **Icons:** lucide-react
+- **Chatbot (Eeva):** Groq SDK + `@google/generative-ai` — system prompt and route in [src/app/api/chat/route.ts](src/app/api/chat/route.ts)
 
 ## Project Structure
 ```
@@ -49,24 +52,35 @@ src/
 │   │   └── register/page.tsx
 │   ├── (dashboard)/               # Protected routes (sidebar layout)
 │   │   ├── dashboard/page.tsx     # Stats, recent activity, organizer analytics
-│   │   ├── events/create/page.tsx # Create event form
+│   │   ├── events/create/         # Create event form
+│   │   ├── events/[slug]/         # Dashboard event detail
 │   │   ├── my-registrations/      # Student QR codes + cancel registration
 │   │   ├── check-in/              # Manual QR check-in
 │   │   ├── certificates/          # Student certificates
 │   │   ├── notifications/         # Full notification list (tabs: all/unread)
 │   │   ├── profile/               # User profile (edit name, dept, year, phone, interests)
+│   │   ├── announcements/         # Announcement board + threaded comments
 │   │   ├── organized-events/      # Organizer event management
 │   │   │   └── [id]/
 │   │   │       ├── students/      # Registration list + CSV export
 │   │   │       ├── edit/          # Edit event
 │   │   │       └── certificates/  # Issue certificates
+│   │   ├── admin/                 # Admin sub-routes inside dashboard layout
+│   │   │   ├── events/
+│   │   │   └── users/
 │   │   └── layout.tsx
 │   ├── (public)/                  # Public pages (navbar layout)
+│   │   ├── about/                 # About page
+│   │   ├── contact/               # Contact page
 │   │   ├── events/page.tsx        # Events with search, filter, sort
-│   │   ├── events/[id]/page.tsx   # Event detail + register
+│   │   ├── events/[id]/page.tsx   # Event detail + register (id route)
+│   │   ├── events/[slug]/         # Event detail by slug
 │   │   └── verify/[code]/page.tsx # Public certificate verification
+│   ├── verification-pending/      # Page shown to unverified organizers
 │   ├── admin/                     # Admin panel (separate layout)
 │   │   ├── page.tsx               # Admin dashboard
+│   │   ├── colleges/              # Manage organizations (list/create/[id])
+│   │   ├── organizer-requests/    # Approve/reject organizer signups
 │   │   ├── events/                # All events management
 │   │   │   └── [id]/
 │   │   │       ├── attendance/
@@ -81,18 +95,25 @@ src/
 │       ├── notifications/         # GET list, PATCH mark-read, POST mark-all-read
 │       ├── announcements/         # CRUD + comments + reactions
 │       ├── comments/              # Edit + delete + reactions
+│       ├── organizations/         # Org CRUD (admin manages colleges)
+│       ├── organizer-requests/    # Approve/reject organizer verification
+│       ├── chat/                  # Eeva chatbot (Groq) — server-side LLM proxy
 │       ├── upload/                # Cloudinary upload
+│       ├── migration/cloudinary/  # Cloudinary migration endpoint
 │       ├── documents/download/    # Document download
 │       └── seed/                  # Database seeding
 ├── components/
-│   ├── ui/                        # shadcn: button, input, label, card, badge, avatar, alert-dialog, select, dropdown-menu, textarea, separator, tabs, sonner
+│   ├── ui/                        # shadcn primitives
 │   ├── layout/                    # navbar.tsx, sidebar.tsx, notification-bell.tsx
-│   ├── events/                    # event-register-button, student-qr-display, qr-scanner, event-filters, event-card, event-status-dropdown, export-csv-button, duplicate-event-button
+│   ├── events/                    # register-button, student-qr-display, qr-scanner, filters, card, status-dropdown, export-csv, duplicate
 │   ├── certificates/              # issue-certificates-form
 │   ├── registrations/             # delete-registration-button, cancel-registration-button
 │   ├── notifications/             # notification-list
-│   ├── announcements/             # announcement-card, announcement-form, announcement-list, announcement-detail, comment-section, reaction-button
+│   ├── announcements/             # announcement-card/form/list/detail, comment-section, reaction-button
 │   ├── profile/                   # profile-form
+│   ├── admin/                     # college-form, delete-college-button, organizer-request-actions
+│   ├── auth/                      # (placeholder)
+│   ├── chatbot/                   # eeva-avatar, eeva-chatbot (floating widget)
 │   ├── providers.tsx              # SessionProvider + QueryClientProvider
 │   └── logo.tsx
 ├── lib/
@@ -102,18 +123,25 @@ src/
 │   ├── email.ts                   # Resend email (registration, certificate, reminder)
 │   ├── nav-items.ts               # Dashboard + public nav (role-filtered)
 │   ├── migration.ts               # Cloudinary migration helpers
+│   ├── college-domain-map.ts      # email-domain → CollegeInfo lookup table (UP institutions)
+│   ├── resolve-org.ts             # resolveOrgFromEmail() — findOrCreate Organization on register
+│   ├── data/
+│   │   └── iet-events.ts          # static seed-style event data
 │   ├── validators/
 │   │   ├── auth.ts                # login + register Zod schemas
-│   │   └── profile.ts             # profile update Zod schema
+│   │   ├── profile.ts             # profile update Zod schema
+│   │   └── organization.ts        # organization Zod schema
 │   └── actions/
-│       ├── auth.ts                # registerUser()
+│       ├── auth.ts                # registerUser() — runs resolveOrgFromEmail()
 │       ├── events.ts              # createEvent(), bulkImportEvents()
 │       ├── registrations.ts       # deleteRegistration()
 │       ├── certificates.ts        # getUserCertificates(), createCertificate(), etc.
 │       ├── profile.ts             # updateProfile()
 │       ├── event-status.ts        # updateEventStatus() with state machine
 │       ├── cancel-registration.ts # cancelRegistration() — student soft-cancel
-│       └── duplicate-event.ts     # duplicateEvent() — clone as DRAFT
+│       ├── duplicate-event.ts     # duplicateEvent() — clone as DRAFT
+│       ├── announcements.ts       # announcement create/update/delete + reactions
+│       └── organizations.ts       # admin org CRUD
 ├── hooks/                         # (empty — no custom hooks yet)
 ├── types/
 │   ├── index.ts                   # Re-exports Prisma enums, NavItem interface
@@ -121,44 +149,46 @@ src/
 └── middleware.ts                   # Route protection + auth redirects
 
 prisma/
-├── schema.prisma                  # 11 models, 4 enums
+├── schema.prisma                  # 13 models, 7 enums
 └── migrations/
 ```
 
 ## Database Models
-Schema in `prisma/schema.prisma`:
+Schema in [prisma/schema.prisma](prisma/schema.prisma):
 - **Organization** — Multi-college (name, slug, logo, settings JSON)
-- **User** — Auth + profile (role, department, year, interests[], orgId)
+- **User** — Auth + profile (role, department, year, interests[], avatarUrl, isActive, isVerified, orgId). `isVerified` gates organizer access — see Auth Flow.
 - **Account/Session/VerificationToken** — NextAuth adapter tables
-- **Event** — Core entity (title, slug, description, category, tags[], dates, venue, capacity, posterUrl, documents JSON, status, customFields JSON, organizerId, orgId)
-- **Registration** — User-event join (status, qrCode UUID, formData JSON). Unique: (userId, eventId)
+- **Event** — Core entity (title, slug, description, category, tags[], dates, venue, capacity, posterUrl, documents JSON, status, customFields JSON, organizerId, approvedById, orgId)
+- **Registration** — User-event join (status, qrCode UUID, formData JSON, cancelledAt). Unique: (userId, eventId)
 - **Attendance** — Check-in record (method: QR/MANUAL). Unique: registrationId
 - **CertTemplate** — Certificate template (templateData JSON, orgId)
 - **Certificate** — Issued cert (certificateUrl, verificationCode UUID). Unique: (userId, eventId)
-- **Notification** — In-app alerts (type enum, isRead). Indexed: (userId, isRead)
+- **Notification** — In-app alerts (type enum, isRead, link). Indexed: (userId, isRead)
+- **OrganizerRequest** — Organizer verification request (collegeName, designation, organizationWeb?, reason, status, rejectionReason?, reviewerId?). Unique: userId. Indexed: status
 - **Announcement** — Org-wide posts (title, content, isPinned, authorId, orgId, eventId?). Indexed: (orgId, createdAt)
 - **Comment** — Threaded comments on announcements (content, authorId, announcementId, parentId?). Indexed: (announcementId, createdAt)
-- **AnnouncementReaction** — Emoji reactions on announcements. Unique: (userId, announcementId, emoji)
-- **CommentReaction** — Emoji reactions on comments. Unique: (userId, commentId, emoji)
+- **AnnouncementReaction / CommentReaction** — Emoji reactions. Unique on (userId, parentId, emoji).
 
 ### Enums
 - `Role`: STUDENT, ORGANIZER, ADMIN
 - `EventStatus`: DRAFT, PENDING, PUBLISHED, ONGOING, COMPLETED, CANCELLED, ARCHIVED
 - `EventCategory`: TECHNICAL, CULTURAL, WORKSHOP, SEMINAR, HACKATHON, SPORTS, SOCIAL, OTHER
 - `RegistrationStatus`: CONFIRMED, WAITLISTED, CANCELLED
+- `AttendanceMethod`: QR, MANUAL
+- `OrganizerRequestStatus`: PENDING, APPROVED, REJECTED
+- `NotificationType`: EVENT_*, REGISTRATION_*, CERTIFICATE_READY, ANNOUNCEMENT_POSTED, ANNOUNCEMENT_COMMENT, ORGANIZER_REQUEST, ORGANIZER_APPROVED, ORGANIZER_REJECTED, GENERAL
 
 ## Roles & Permissions
-- **STUDENT** — Browse events, register, view QR codes, download certificates
-- **ORGANIZER** — Create events (auto-published), manage registrations, scan QR, issue certificates
-- **ADMIN** — Approve/reject events, manage all users, platform analytics, Cloudinary migration
+- **STUDENT** — Browse events, register, view QR codes, download certificates, post on announcement board
+- **ORGANIZER** — Create events, manage registrations, scan QR, issue certificates. **Must be verified** by an admin before any organizer-only route is accessible.
+- **ADMIN** — Approve/reject events and organizer requests, manage colleges (organizations) and users, platform analytics, Cloudinary migration
 
 ## Auth Flow
-- JWT strategy (not database sessions)
-- Credentials: email + bcrypt-hashed password (salt 12)
-- Google OAuth supported
-- Session augmented with: `user.id`, `user.role`, `user.department`
-- New organizers auto-assigned to "IET Lucknow" org
-- Middleware protects dashboard/admin routes, redirects authed users away from login/register
+- JWT strategy (not database sessions); session augmented with `user.id`, `user.role`, `user.department`, `user.isVerified`.
+- Credentials: email + bcrypt-hashed password (salt 12). Google OAuth also supported.
+- **Org resolution on register** — [registerUser()](src/lib/actions/auth.ts) calls [resolveOrgFromEmail()](src/lib/resolve-org.ts), which looks the email domain up in [college-domain-map.ts](src/lib/college-domain-map.ts) and `findOrCreate`s the matching `Organization`. Unknown domains → no org assigned (user can still register but is "unaffiliated"). The legacy "IET Lucknow" org is matched by name as a fallback.
+- **Organizer verification** — Users who register as ORGANIZER are created with `isVerified=false` and must submit an `OrganizerRequest`. Admin approves/rejects via `/admin/organizer-requests`. Until verified, [middleware.ts](src/middleware.ts) redirects them to `/verification-pending` and blocks `/events/create`, `/organized-events`, `/check-in`, `/admin`.
+- Middleware also protects all dashboard/admin routes and redirects logged-in users away from login/register.
 
 ## API Routes Summary
 | Method | Route | Purpose |
@@ -184,6 +214,11 @@ Schema in `prisma/schema.prisma`:
 | POST | `/api/announcements/[id]/reactions` | Toggle emoji reaction |
 | PUT/DELETE | `/api/comments/[id]` | Edit/delete comment |
 | POST | `/api/comments/[id]/reactions` | Toggle comment reaction |
+| GET/POST | `/api/organizations` | List/create colleges (admin) |
+| GET/PUT/DELETE | `/api/organizations/[id]` | College CRUD (admin) |
+| PATCH | `/api/organizer-requests/[id]` | Approve/reject organizer request (admin) |
+| POST | `/api/chat` | Eeva chatbot — server-side Groq proxy |
+| POST | `/api/migration/cloudinary` | Trigger Cloudinary migration (admin) |
 | POST | `/api/seed` | Seed database |
 
 ## Conventions
@@ -210,25 +245,25 @@ Schema in `prisma/schema.prisma`:
 
 ### Environment Variables
 Required: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
-Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `NEXT_PUBLIC_APP_URL`
+Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `TEST_EMAIL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `NEXT_PUBLIC_APP_URL`, `GROQ_API_KEY` (Eeva chatbot), `GOOGLE_GENERATIVE_AI_API_KEY`
 
 ### Git
 - Don't commit `node_modules/`, `.next/`, `.env`
 - Prisma client generated in `node_modules/@prisma/client` (Prisma v6)
 
-## Key Features Added
-- **Profile page** — students/organizers edit name, department, year, phone, interests
-- **Event search & filters** — search by title, filter by category, sort by date/registrations
+## Key Features
+- **Multi-college auto-provisioning** — email-domain → Organization mapping, see Auth Flow
+- **Organizer verification flow** — `OrganizerRequest` model + middleware-enforced gate, admin review at `/admin/organizer-requests`
+- **Admin colleges UI** — `/admin/colleges` for managing organizations
+- **Eeva chatbot** — floating widget ([components/chatbot/eeva-chatbot.tsx](src/components/chatbot/eeva-chatbot.tsx)) backed by Groq via `/api/chat`; system prompt includes full platform knowledge
+- **Announcements & Discussion** — org-wide board with threaded comments, emoji reactions, pin/unpin, event linking, notification integration
 - **Notification system** — bell icon with unread badge, dropdown, full notifications page with tabs
-- **Event status management** — organizers change status (PUBLISHED→ONGOING→COMPLETED→ARCHIVED, cancel)
-- **Cancel registration** — students soft-cancel their own registrations
-- **CSV export** — organizers download registration lists
-- **Duplicate event** — clone events as DRAFT for recurring use
-- **Certificate verification** — public `/verify/[code]` page
-- **Toast notifications** — sonner replaces all alert() calls
-- **Announcements & Discussion** — Org-wide announcement board with threaded comments, emoji reactions, pin/unpin, event linking, edit/delete, notification integration
+- **Event status state machine** — organizers move status (PUBLISHED→ONGOING→COMPLETED→ARCHIVED, cancel) via [event-status.ts](src/lib/actions/event-status.ts)
+- **Self check-in** — students can self-check-in within a 15-minute window of event start
+- **CSV export, duplicate event, cancel registration, public certificate verification, sonner toasts**
 
 ## Known Incomplete Areas
-- `src/hooks/` — Empty, no custom hooks yet
-- Certificate PDF generation — stores URL but HTML certificate generated, no PDF library wired
-- Event validators — event creation/update uses inline validation, not extracted to validators/
+- `src/hooks/` — empty
+- `src/components/auth/` — empty placeholder
+- Certificate PDF generation — `@react-pdf/renderer` is installed but not wired; certificates are stored as URL with HTML rendering
+- Event validators — event create/update uses inline validation, not extracted to `validators/`

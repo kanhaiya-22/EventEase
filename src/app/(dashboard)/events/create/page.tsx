@@ -37,6 +37,7 @@ export default function CreateEventPage() {
     capacity: "",
     posterUrl: "",
     tags: "",
+    status: "PUBLISHED" as "DRAFT" | "PUBLISHED",
   });
   const [mediaPreview, setMediaPreview] = useState<{ url: string; type: "image" | "video" } | null>(null);
   const [documents, setDocuments] = useState<Array<{ url: string; name: string }>>([]);
@@ -172,6 +173,7 @@ export default function CreateEventPage() {
         tags: formData.tags
           ? formData.tags.split(",").map((tag) => tag.trim())
           : [],
+        status: formData.status,
       };
 
       const result = await createEvent(payload);
@@ -180,8 +182,13 @@ export default function CreateEventPage() {
         throw new Error(result.details || result.error || "Failed to create event");
       }
 
-      // Success - redirect to event detail page
-      router.push(`/events/${result.event.id}`);
+      // Drafts aren't public — send the organizer to their events list.
+      // Published events go to the public detail page.
+      router.push(
+        formData.status === "DRAFT"
+          ? "/organized-events"
+          : `/events/${result.event.id}`
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
       setError(message);
@@ -262,6 +269,26 @@ export default function CreateEventPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Status */}
+            <div>
+              <Label htmlFor="status" className="text-base font-semibold">
+                Publish Status *
+              </Label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+              >
+                <option value="PUBLISHED">Publish — visible to students immediately</option>
+                <option value="DRAFT">Draft — save privately, publish later</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Drafts are only visible to you in &quot;My Events&quot; and can be published later.
+              </p>
             </div>
 
             {/* Date and Time */}
@@ -529,7 +556,11 @@ export default function CreateEventPage() {
                 disabled={loading || uploading}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {loading ? "Creating..." : "Create Event"}
+                {loading
+                  ? "Creating..."
+                  : formData.status === "DRAFT"
+                    ? "Save as Draft"
+                    : "Publish Event"}
               </Button>
               <Button
                 type="button"

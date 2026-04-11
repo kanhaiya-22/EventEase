@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,9 @@ interface Event {
 export default function EditEventPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const eventId = params.id as string;
+  const fromAdmin = searchParams.get("from") === "admin";
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -262,7 +264,7 @@ export default function EditEventPage() {
         throw new Error(data.error || "Failed to update event");
       }
 
-      router.push(`/organized-events/${eventId}/students`);
+      router.push(fromAdmin ? "/admin/events" : `/organized-events/${eventId}/students`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred";
       setError(message);

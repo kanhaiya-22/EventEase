@@ -136,6 +136,7 @@ export async function createEvent(formData: {
   posterUrl?: string;
   documents?: Array<{ url: string; name: string }>;
   tags?: string[];
+  status?: "DRAFT" | "PUBLISHED";
 }) {
   try {
     const { auth } = await import("@/lib/auth");
@@ -207,6 +208,8 @@ export async function createEvent(formData: {
       suffix++;
     }
 
+    const initialStatus = formData.status === "DRAFT" ? "DRAFT" : "PUBLISHED";
+
     const event = await db.event.create({
       data: {
         title: formData.title,
@@ -222,7 +225,7 @@ export async function createEvent(formData: {
         customFields: JSON.stringify({ documents: formData.documents || [] }),
         organizerId: user.id,
         orgId: user.orgId || undefined,
-        status: "PUBLISHED",
+        status: initialStatus,
       },
       include: {
         organizer: {

@@ -3,11 +3,18 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BarChart3, CheckCircle2, Calendar, Copy } from "lucide-react";
+import { Users, BarChart3, CheckCircle2, Calendar } from "lucide-react";
 import { EventStatusDropdown } from "@/components/events/event-status-dropdown";
 import { DuplicateEventButton } from "@/components/events/duplicate-event-button";
+import type { Prisma } from "@prisma/client";
 
-export default async function OrganizedEventsPage() {
+type ViewFilter = "active" | "archived" | "all";
+
+export default async function OrganizedEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.email) {
@@ -23,11 +30,37 @@ export default async function OrganizedEventsPage() {
     redirect("/login");
   }
 
+  const { view } = await searchParams;
+  const currentView: ViewFilter =
+    view === "archived" || view === "all" ? view : "active";
+
+  const scopeWhere: Prisma.EventWhereInput = user.orgId
+    ? { orgId: user.orgId }
+    : { organizer: { email: session.user.email } };
+
+  const statusWhere: Prisma.EventWhereInput =
+    currentView === "active"
+      ? { status: { notIn: ["ARCHIVED", "CANCELLED"] } }
+      : currentView === "archived"
+        ? { status: { in: ["ARCHIVED", "CANCELLED"] } }
+        : {};
+
+  const where: Prisma.EventWhereInput = { AND: [scopeWhere, statusWhere] };
+
+  // Counts for tab badges
+  const [activeCount, archivedCount, allCount] = await Promise.all([
+    db.event.count({
+      where: { AND: [scopeWhere, { status: { notIn: ["ARCHIVED", "CANCELLED"] } }] },
+    }),
+    db.event.count({
+      where: { AND: [scopeWhere, { status: { in: ["ARCHIVED", "CANCELLED"] } }] },
+    }),
+    db.event.count({ where: scopeWhere }),
+  ]);
+
   // Show events from the organizer's entire organization (not just their own)
   const events = await db.event.findMany({
-    where: user.orgId
-      ? { orgId: user.orgId }
-      : { organizer: { email: session.user.email } },
+    where,
     include: {
       organizer: {
         select: { id: true, name: true },
@@ -63,6 +96,12 @@ export default async function OrganizedEventsPage() {
     0
   );
 
+  const tabs: { key: ViewFilter; label: string; count: number }[] = [
+    { key: "active", label: "Active", count: activeCount },
+    { key: "archived", label: "Archived & Cancelled", count: archivedCount },
+    { key: "all", label: "All", count: allCount },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -75,6 +114,29 @@ export default async function OrganizedEventsPage() {
             ? `All events organized by ${user.org.name}`
             : "Manage and view all events you've organized"}
         </p>
+      </div>
+
+      {/* View tabs */}
+      <div className="flex flex-wrap gap-2 border-b">
+        {tabs.map((tab) => {
+          const isActive = tab.key === currentView;
+          return (
+            <Link
+              key={tab.key}
+              href={`/organized-events?view=${tab.key}`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                isActive
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              <span className="ml-2 text-xs bg-muted rounded-full px-2 py-0.5">
+                {tab.count}
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Overview Stats */}
@@ -150,13 +212,21 @@ export default async function OrganizedEventsPage() {
       {/* Events List */}
       {events.length === 0 ? (
         <div className="bg-slate-800 rounded-lg p-8 text-center">
-          <p className="text-slate-300 text-lg">No events organized yet.</p>
-          <Link
-            href="/events/create"
-            className="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Create Your First Event
-          </Link>
+          <p className="text-slate-300 text-lg">
+            {currentView === "archived"
+              ? "No archived or cancelled events."
+              : currentView === "active"
+                ? "No active events. Check the Archived tab or create a new one."
+                : "No events organized yet."}
+          </p>
+          {currentView !== "archived" && (
+            <Link
+              href="/events/create"
+              className="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Create Your First Event
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -172,10 +242,10 @@ export default async function OrganizedEventsPage() {
                       (attendedCount / event._count.registrations) * 100
                     )
                   : 0;
-              const isUpcoming = new Date(event.startDate) > new Date();
+              const isInactive = event.status === "ARCHIVED" || event.status === "CANCELLED";
 
               return (
-                <Card key={event.id}>
+                <Card key={event.id} className={isInactive ? "opacity-70" : ""}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

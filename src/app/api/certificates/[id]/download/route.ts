@@ -26,19 +26,9 @@ export async function GET(
     }
 
     const code = request.nextUrl.searchParams.get("code");
-    if (!code) {
-      return NextResponse.json(
-        { error: "Verification code is required" },
-        { status: 400 }
-      );
-    }
 
-    const certificate = await db.certificate.findFirst({
-      where: {
-        id,
-        userId: user.id,
-        verificationCode: code,
-      },
+    const certificate = await db.certificate.findUnique({
+      where: { id },
       include: {
         event: {
           select: {
@@ -48,6 +38,7 @@ export async function GET(
             endDate: true,
             venue: true,
             category: true,
+            organizerId: true,
             org: {
               select: { name: true },
             },
@@ -66,9 +57,31 @@ export async function GET(
 
     if (!certificate) {
       return NextResponse.json(
-        { error: "Certificate not found or verification code is invalid" },
+        { error: "Certificate not found" },
         { status: 404 }
       );
+    }
+
+    // Authorization: the certificate owner, the event organizer, or an admin may download.
+    const isOwner = certificate.userId === user.id;
+    const isEventOrganizer = certificate.event.organizerId === user.id;
+    const isAdmin = user.role === "ADMIN";
+    if (!isOwner && !isEventOrganizer && !isAdmin) {
+      return NextResponse.json(
+        { error: "You do not have permission to download this certificate" },
+        { status: 403 }
+      );
+    }
+
+    // Admins and event organizers are trusted; the certificate owner must still
+    // pass the verification code so cert IDs can't be guessed from another session.
+    if (!isAdmin && !isEventOrganizer) {
+      if (!code || code !== certificate.verificationCode) {
+        return NextResponse.json(
+          { error: "Verification code is required or invalid" },
+          { status: 400 }
+        );
+      }
     }
 
     if (!certificate.issuedAt) {

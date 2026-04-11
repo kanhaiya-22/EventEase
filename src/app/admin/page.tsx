@@ -3,9 +3,9 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, Award, Ticket } from "lucide-react";
 import Link from "next/link";
+import { EventStatusBadge } from "@/components/events/event-status-badge";
 
 export default async function AdminPanel() {
   const session = await auth();
@@ -55,23 +55,6 @@ export default async function AdminPanel() {
     orderBy: { createdAt: "desc" },
     take: 10,
   });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "bg-green-100 text-green-800";
-      case "ONGOING":
-        return "bg-blue-100 text-blue-800";
-      case "COMPLETED":
-        return "bg-gray-100 text-gray-800";
-      case "DRAFT":
-        return "bg-yellow-100 text-yellow-800";
-      case "CANCELLED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   return (
     <div className="space-y-8">
@@ -196,9 +179,7 @@ export default async function AdminPanel() {
                       </td>
                     )}
                     <td className="px-6 py-4">
-                      <Badge className={getStatusColor(event.status)}>
-                        {event.status}
-                      </Badge>
+                      <EventStatusBadge status={event.status} size="sm" />
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(event.startDate).toLocaleDateString("en-IN")}

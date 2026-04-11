@@ -45,6 +45,7 @@ export const dashboardNav: NavItem[] = [
     title: "Announcements",
     href: "/announcements",
     icon: "Megaphone",
+    roles: ["STUDENT", "ORGANIZER"],
   },
   {
     title: "Notifications",
@@ -60,6 +61,12 @@ export const dashboardNav: NavItem[] = [
     title: "Colleges",
     href: "/admin/colleges",
     icon: "Building2",
+    roles: ["ADMIN"],
+  },
+  {
+    title: "All Announcements",
+    href: "/admin/announcements",
+    icon: "Megaphone",
     roles: ["ADMIN"],
   },
   {

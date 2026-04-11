@@ -1,13 +1,20 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Award, Users, Edit, QrCode } from "lucide-react";
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
+import { EventStatusDropdown } from "@/components/events/event-status-dropdown";
 
-export default async function AdminEventsPage() {
+type ViewFilter = "active" | "archived" | "all";
+
+export default async function AdminEventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.email) {
@@ -22,43 +29,56 @@ export default async function AdminEventsPage() {
     redirect("/");
   }
 
-  // Admin sees all; organizers see their org's events
-  const events = await db.event.findMany({
-    where:
-      user.role === "ADMIN"
-        ? {}
-        : user.orgId
-          ? { orgId: user.orgId }
-          : { organizerId: user.id },
-    include: {
-      organizer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      _count: {
-        select: {
-          registrations: { where: { status: { not: "CANCELLED" } } },
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const { view } = await searchParams;
+  const currentView: ViewFilter =
+    view === "archived" || view === "all" ? view : "active";
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "bg-green-100 text-green-800";
-      case "DRAFT":
-        return "bg-yellow-100 text-yellow-800";
-      case "CANCELLED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // Admin sees all; organizers see their org's events
+  const scopeWhere: Prisma.EventWhereInput =
+    user.role === "ADMIN"
+      ? {}
+      : user.orgId
+        ? { orgId: user.orgId }
+        : { organizerId: user.id };
+
+  const statusWhere: Prisma.EventWhereInput =
+    currentView === "active"
+      ? { status: { notIn: ["ARCHIVED", "CANCELLED"] } }
+      : currentView === "archived"
+        ? { status: { in: ["ARCHIVED", "CANCELLED"] } }
+        : {};
+
+  const where: Prisma.EventWhereInput = { AND: [scopeWhere, statusWhere] };
+
+  const [events, activeCount, archivedCount, allCount] = await Promise.all([
+    db.event.findMany({
+      where,
+      include: {
+        organizer: {
+          select: { id: true, name: true, email: true },
+        },
+        _count: {
+          select: {
+            registrations: { where: { status: { not: "CANCELLED" } } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.event.count({
+      where: { AND: [scopeWhere, { status: { notIn: ["ARCHIVED", "CANCELLED"] } }] },
+    }),
+    db.event.count({
+      where: { AND: [scopeWhere, { status: { in: ["ARCHIVED", "CANCELLED"] } }] },
+    }),
+    db.event.count({ where: scopeWhere }),
+  ]);
+
+  const tabs: { key: ViewFilter; label: string; count: number }[] = [
+    { key: "active", label: "Active", count: activeCount },
+    { key: "archived", label: "Archived & Cancelled", count: archivedCount },
+    { key: "all", label: "All", count: allCount },
+  ];
 
   return (
     <div className="space-y-8">
@@ -69,9 +89,32 @@ export default async function AdminEventsPage() {
             Manage your events and view registrations
           </p>
         </div>
-        <Link href="/dashboard/events/create">
+        <Link href="/events/create">
           <Button>Create Event</Button>
         </Link>
+      </div>
+
+      {/* View tabs */}
+      <div className="flex flex-wrap gap-2 border-b">
+        {tabs.map((tab) => {
+          const isActive = tab.key === currentView;
+          return (
+            <Link
+              key={tab.key}
+              href={`/admin/events?view=${tab.key}`}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                isActive
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              <span className="ml-2 text-xs bg-muted rounded-full px-2 py-0.5">
+                {tab.count}
+              </span>
+            </Link>
+          );
+        })}
       </div>
 
       {events.length === 0 ? (
@@ -80,25 +123,31 @@ export default async function AdminEventsPage() {
             <p className="text-muted-foreground">
               No events yet. Create your first event to get started.
             </p>
-            <Link href="/dashboard/events/create" className="mt-4 inline-block">
+            <Link href="/events/create" className="mt-4 inline-block">
               <Button>Create Event</Button>
             </Link>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {events.map((event) => (
-            <Card key={event.id} className="hover:shadow-lg transition-shadow">
+          {events.map((event) => {
+            const isInactive = event.status === "ARCHIVED" || event.status === "CANCELLED";
+            return (
+            <Card
+              key={event.id}
+              className={`hover:shadow-lg transition-shadow ${isInactive ? "opacity-70" : ""}`}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h3 className="text-lg font-semibold truncate">
                         {event.title}
                       </h3>
-                      <Badge className={getStatusColor(event.status)}>
-                        {event.status}
-                      </Badge>
+                      <EventStatusDropdown
+                        eventId={event.id}
+                        currentStatus={event.status}
+                      />
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {event.description}
@@ -142,7 +191,7 @@ export default async function AdminEventsPage() {
                       Certificates
                     </Button>
                   </Link>
-                  <Link href={`/dashboard/organized-events/${event.id}/edit`}>
+                  <Link href={`/organized-events/${event.id}/edit?from=admin`}>
                     <Button variant="outline" size="sm" className="gap-2">
                       <Edit className="h-4 w-4" />
                       Edit
@@ -151,7 +200,8 @@ export default async function AdminEventsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

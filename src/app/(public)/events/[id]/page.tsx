@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import EventRegisterButton from "@/components/events/event-register-button";
 import { Download, FileText } from "lucide-react";
+import { EventStatusBadge } from "@/components/events/event-status-badge";
 
 interface EventDetailPageProps {
   params: Promise<{
@@ -127,19 +128,11 @@ export default async function EventDetailPage({
 
             <div className="bg-slate-800 rounded-lg p-8 mb-8">
               <div className="mb-6">
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="bg-blue-900 text-blue-400 px-4 py-2 rounded-full text-sm font-semibold">
                     {event.category}
                   </span>
-                  <span
-                    className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                      event.status === "PUBLISHED"
-                        ? "bg-green-900 text-green-400"
-                        : "bg-yellow-900 text-yellow-400"
-                    }`}
-                  >
-                    {event.status}
-                  </span>
+                  <EventStatusBadge status={event.status} />
                   {event.org && (
                     <span className="bg-purple-900 text-purple-300 px-4 py-2 rounded-full text-sm font-semibold">
                       📚 {event.org.name}
