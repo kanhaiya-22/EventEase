@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -8,18 +9,43 @@ import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validators/auth";
 import { resolveOrgFromEmail } from "@/lib/resolve-org";
 
+const basePrismaAdapter = PrismaAdapter(db);
+
+const prismaAdapter: Adapter = {
+  ...basePrismaAdapter,
+  createUser: async (data) => {
+    const created = await db.user.create({
+      data: {
+        email: data.email,
+        name: data.name ?? data.email.split("@")[0],
+        avatarUrl: data.image ?? null,
+        emailVerified: data.emailVerified ?? null,
+        profileCompleted: false,
+      },
+    });
+    return {
+      id: created.id,
+      email: created.email,
+      name: created.name,
+      image: created.avatarUrl,
+      emailVerified: created.emailVerified,
+    } as AdapterUser;
+  },
+};
+
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(db),
+  adapter: prismaAdapter,
   session: { strategy: "jwt" },
   trustHost: true,
   pages: {
     signIn: "/login",
-    newUser: "/dashboard",
+    newUser: "/complete-profile",
   },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       name: "credentials",
@@ -62,13 +88,21 @@ export const authConfig: NextAuthConfig = {
       if (user || trigger === "update") {
         const dbUser = await db.user.findUnique({
           where: { email: token.email! },
-          select: { id: true, role: true, department: true, orgId: true, isVerified: true },
+          select: {
+            id: true,
+            role: true,
+            department: true,
+            orgId: true,
+            isVerified: true,
+            profileCompleted: true,
+          },
         });
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.department = dbUser.department;
           token.isVerified = dbUser.isVerified;
+          token.profileCompleted = dbUser.profileCompleted;
 
           // Auto-assign org from email domain for OAuth users who don't have one
           if (!dbUser.orgId && token.email) {
@@ -92,6 +126,7 @@ export const authConfig: NextAuthConfig = {
         user.role = token.role;
         user.department = token.department;
         user.isVerified = token.isVerified;
+        user.profileCompleted = token.profileCompleted;
       }
       return session;
     },

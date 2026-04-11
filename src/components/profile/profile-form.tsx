@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { updateProfile } from "@/lib/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,8 @@ interface ProfileFormProps {
     phone: string | null;
     interests: string[];
   };
+  redirectTo?: string;
+  submitLabel?: string;
 }
 
 const DEPARTMENTS = [
@@ -45,7 +49,9 @@ const DEPARTMENTS = [
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "Alumni"];
 
-export function ProfileForm({ user }: ProfileFormProps) {
+export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps) {
+  const router = useRouter();
+  const { update: updateSession } = useSession();
   const [name, setName] = useState(user.name);
   const [department, setDepartment] = useState(user.department || "");
   const [year, setYear] = useState(user.year || "");
@@ -82,6 +88,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
     if (result.success) {
       toast.success(result.message);
+      if (redirectTo) {
+        await updateSession();
+        router.push(redirectTo);
+        router.refresh();
+      }
     } else {
       toast.error(result.error);
     }
@@ -220,7 +231,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
           ) : (
             <>
               <Save className="h-4 w-4" />
-              Save Changes
+              {submitLabel ?? "Save Changes"}
             </>
           )}
         </Button>

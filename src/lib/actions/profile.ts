@@ -28,6 +28,7 @@ export async function updateProfile(data: ProfileInput) {
         year: year || null,
         phone: phone || null,
         interests,
+        profileCompleted: true,
       },
     });
 

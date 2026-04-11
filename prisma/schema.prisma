@@ -106,6 +106,7 @@ model User {
   emailVerified DateTime?
   isActive      Boolean   @default(true)
   isVerified    Boolean   @default(true)
+  profileCompleted Boolean @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

@@ -55,6 +55,7 @@ export async function registerUser(data: RegisterInput) {
       orgId,
       // Organizers start unverified until admin approves
       isVerified: !isOrganizer,
+      profileCompleted: true,
     },
   });
 
