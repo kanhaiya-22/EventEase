@@ -11,6 +11,7 @@ import { resolveOrgFromEmail } from "@/lib/resolve-org";
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
+  trustHost: true,
   pages: {
     signIn: "/login",
     newUser: "/dashboard",
