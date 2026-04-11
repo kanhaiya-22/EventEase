@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Hourglass } from "lucide-react";
 import DeleteRegistrationButton from "@/components/registrations/delete-registration-button";
 import IssueCertificatesForm from "@/components/certificates/issue-certificates-form";
 import { ExportCSVButton } from "@/components/events/export-csv-button";
@@ -33,7 +33,7 @@ export default async function StudentsPage({
         select: { id: true, email: true },
       },
       registrations: {
-        where: { status: { not: "CANCELLED" } },
+        where: { status: { in: ["CONFIRMED", "WAITLISTED"] } },
         include: {
           user: {
             select: {
@@ -53,7 +53,7 @@ export default async function StudentsPage({
           },
         },
         orderBy: {
-          registeredAt: "desc",
+          registeredAt: "asc",
         },
       },
     },
@@ -68,8 +68,15 @@ export default async function StudentsPage({
     redirect("/organized-events");
   }
 
-  const totalRegistrations = event.registrations.length;
-  const attendedCount = event.registrations.filter(
+  const confirmedRegistrations = event.registrations.filter(
+    (r) => r.status === "CONFIRMED"
+  );
+  const waitlistedRegistrations = event.registrations.filter(
+    (r) => r.status === "WAITLISTED"
+  );
+
+  const totalRegistrations = confirmedRegistrations.length;
+  const attendedCount = confirmedRegistrations.filter(
     (reg) => reg.attendance
   ).length;
   const absentCount = totalRegistrations - attendedCount;
@@ -97,13 +104,19 @@ export default async function StudentsPage({
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Registrations
+              Confirmed Registrations
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalRegistrations}</div>
             <p className="text-xs text-muted-foreground mt-1">
               out of {event.capacity} capacity
+              {waitlistedRegistrations.length > 0 && (
+                <span className="text-amber-600">
+                  {" "}
+                  · {waitlistedRegistrations.length} waitlisted
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -200,7 +213,7 @@ export default async function StudentsPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {event.registrations.map((registration) => (
+                  {confirmedRegistrations.map((registration) => (
                     <tr
                       key={registration.id}
                       className="border-b hover:bg-gray-50"
@@ -261,6 +274,68 @@ export default async function StudentsPage({
         </CardContent>
       </Card>
 
+      {/* Waitlist */}
+      {waitlistedRegistrations.length > 0 && (
+        <Card className="border-amber-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Hourglass className="h-5 w-5 text-amber-600" />
+                Waitlist
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({waitlistedRegistrations.length})
+                </span>
+              </CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              These students will be auto-promoted in order whenever a confirmed
+              spot opens up.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-semibold">#</th>
+                    <th className="text-left py-3 px-4 font-semibold">Name</th>
+                    <th className="text-left py-3 px-4 font-semibold">Email</th>
+                    <th className="text-left py-3 px-4 font-semibold">Department</th>
+                    <th className="text-left py-3 px-4 font-semibold">Joined</th>
+                    <th className="text-left py-3 px-4 font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {waitlistedRegistrations.map((reg, idx) => (
+                    <tr key={reg.id} className="border-b hover:bg-amber-50/40">
+                      <td className="py-3 px-4 font-semibold text-amber-700">
+                        #{idx + 1}
+                      </td>
+                      <td className="py-3 px-4 font-medium">{reg.user.name}</td>
+                      <td className="py-3 px-4 text-gray-600">{reg.user.email}</td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {reg.user.department || "-"}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 text-xs">
+                        {new Date(reg.registeredAt).toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-4">
+                        <DeleteRegistrationButton
+                          registrationId={reg.id}
+                          eventId={event.id}
+                          studentName={reg.user.name}
+                          studentEmail={reg.user.email}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Issue Certificates Section */}
       {attendedCount > 0 && (
         <div className="space-y-4">
@@ -271,7 +346,7 @@ export default async function StudentsPage({
           <IssueCertificatesForm
             eventId={event.id}
             eventTitle={event.title}
-            registeredStudents={event.registrations.filter((reg) => reg.status === "CONFIRMED" && reg.attendance)}
+            registeredStudents={confirmedRegistrations.filter((reg) => reg.attendance)}
           />
         </div>
       )}

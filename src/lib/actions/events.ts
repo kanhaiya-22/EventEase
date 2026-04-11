@@ -137,6 +137,7 @@ export async function createEvent(formData: {
   documents?: Array<{ url: string; name: string }>;
   tags?: string[];
   status?: "DRAFT" | "PUBLISHED";
+  waitlistEnabled?: boolean;
 }) {
   try {
     const { auth } = await import("@/lib/auth");
@@ -221,6 +222,7 @@ export async function createEvent(formData: {
         endDate: endDateObj,
         venue: formData.venue,
         capacity: parsedCapacity,
+        waitlistEnabled: formData.waitlistEnabled !== false,
         posterUrl: formData.posterUrl,
         customFields: JSON.stringify({ documents: formData.documents || [] }),
         organizerId: user.id,

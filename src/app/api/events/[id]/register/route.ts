@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { sendRegistrationConfirmation } from "@/lib/email";
+import {
+  sendRegistrationConfirmation,
+  sendWaitlistJoinedEmail,
+} from "@/lib/email";
+import { Prisma } from "@prisma/client";
 
 /**
  * POST /api/events/[id]/register
- * Register a user for an event
+ * Register a user for an event. If the event is full and waitlist is enabled,
+ * the client may pass { joinWaitlist: true } to be added to the waitlist.
  */
 export async function POST(
   request: NextRequest,
@@ -13,7 +18,6 @@ export async function POST(
 ) {
   try {
     const session = await auth();
-
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Unauthorized. Please login first." },
@@ -23,155 +27,238 @@ export async function POST(
 
     const user = await db.user.findUnique({
       where: { email: session.user.email },
+      select: { id: true, name: true, email: true },
     });
-
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { id } = await params;
+    const body = await request.json().catch(() => ({}));
+    const formData = body?.formData ?? {};
+    const joinWaitlist: boolean = body?.joinWaitlist === true;
 
-    // Check if event exists
+    // Pre-flight (read-only) checks outside the tx so we can return clean errors.
     const event = await db.event.findUnique({
       where: { id },
-      include: {
-        organizer: {
-          select: { id: true },
-        },
-        org: {
-          select: { name: true },
-        },
-        registrations: {
-          where: { userId: user.id, status: { not: "CANCELLED" } },
-        },
-        _count: {
-          select: {
-            registrations: { where: { status: { not: "CANCELLED" } } },
-          },
-        },
+      select: {
+        id: true,
+        title: true,
+        capacity: true,
+        waitlistEnabled: true,
+        startDate: true,
+        endDate: true,
+        venue: true,
+        category: true,
+        organizerId: true,
+        org: { select: { name: true } },
       },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
-
-    // Check if user is the organizer of this event
-    if (event.organizer.id === user.id) {
+    if (event.organizerId === user.id) {
       return NextResponse.json(
         { error: "Organizers cannot register for their own events" },
         { status: 403 }
       );
     }
 
-    // Check if already registered
-    if (event.registrations.length > 0) {
+    // Atomic capacity check + create / reactivate. Serializable isolation
+    // prevents two concurrent registrations from both passing the count
+    // check and exceeding capacity.
+    type TxResult =
+      | { kind: "duplicate" }
+      | { kind: "needsWaitlistConfirm"; canWaitlist: boolean }
+      | {
+          kind: "ok";
+          status: "CONFIRMED" | "WAITLISTED";
+          registration: {
+            id: string;
+            qrCode: string;
+            status: "CONFIRMED" | "WAITLISTED";
+          };
+          waitlistPosition?: number;
+        };
+
+    const result = await db.$transaction<TxResult>(
+      async (tx) => {
+        const existing = await tx.registration.findUnique({
+          where: { userId_eventId: { userId: user.id, eventId: id } },
+        });
+
+        if (existing && existing.status !== "CANCELLED") {
+          return { kind: "duplicate" };
+        }
+
+        const confirmedCount = await tx.registration.count({
+          where: { eventId: id, status: "CONFIRMED" },
+        });
+        const isFull = confirmedCount >= event.capacity;
+
+        if (isFull && !joinWaitlist) {
+          return {
+            kind: "needsWaitlistConfirm",
+            canWaitlist: event.waitlistEnabled,
+          };
+        }
+
+        if (isFull && joinWaitlist && !event.waitlistEnabled) {
+          return {
+            kind: "needsWaitlistConfirm",
+            canWaitlist: false,
+          };
+        }
+
+        const targetStatus: "CONFIRMED" | "WAITLISTED" = isFull
+          ? "WAITLISTED"
+          : "CONFIRMED";
+
+        const saved = existing
+          ? await tx.registration.update({
+              where: { id: existing.id },
+              data: {
+                status: targetStatus,
+                formData: formData || existing.formData || {},
+                registeredAt: new Date(),
+                cancelledAt: null,
+              },
+              select: { id: true, qrCode: true, status: true },
+            })
+          : await tx.registration.create({
+              data: {
+                userId: user.id,
+                eventId: id,
+                formData: formData || {},
+                status: targetStatus,
+              },
+              select: { id: true, qrCode: true, status: true },
+            });
+
+        let waitlistPosition: number | undefined;
+        if (targetStatus === "WAITLISTED") {
+          const ahead = await tx.registration.count({
+            where: {
+              eventId: id,
+              status: "WAITLISTED",
+              id: { not: saved.id },
+            },
+          });
+          waitlistPosition = ahead + 1;
+        }
+
+        return {
+          kind: "ok",
+          status: targetStatus,
+          registration: {
+            id: saved.id,
+            qrCode: saved.qrCode,
+            status: saved.status as "CONFIRMED" | "WAITLISTED",
+          },
+          waitlistPosition,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (result.kind === "duplicate") {
       return NextResponse.json(
         { error: "You are already registered for this event" },
         { status: 409 }
       );
     }
 
-    // Check capacity
-    if (event._count.registrations >= event.capacity) {
+    if (result.kind === "needsWaitlistConfirm") {
       return NextResponse.json(
         {
-          error:
-            "Event is full. You have been added to the waitlist if available.",
-          status: "WAITLISTED",
+          error: result.canWaitlist
+            ? "Event is full. You can join the waitlist."
+            : "Event is full and the waitlist is closed.",
+          full: true,
+          canWaitlist: result.canWaitlist,
         },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
-    const body = await request.json();
-    const { formData } = body;
+    // Side effects (email + notification) happen outside the transaction.
+    if (result.status === "CONFIRMED") {
+      try {
+        await sendRegistrationConfirmation(
+          user.email,
+          user.name || "User",
+          event.title,
+          {
+            startDate: event.startDate,
+            endDate: event.endDate,
+            venue: event.venue,
+            category: event.category,
+          },
+          event.org?.name
+        );
+      } catch (err) {
+        console.error("Error sending registration email:", err);
+      }
 
-    // Check if there's a cancelled registration to reactivate
-    const cancelledRegistration = await db.registration.findFirst({
-      where: { userId: user.id, eventId: id, status: "CANCELLED" },
-    });
+      try {
+        await db.notification.create({
+          data: {
+            type: "REGISTRATION_CONFIRMED",
+            title: "Registration confirmed",
+            message: `You're confirmed for "${event.title}".`,
+            userId: user.id,
+            link: "/my-registrations",
+          },
+        });
+      } catch (err) {
+        console.error("Error creating notification:", err);
+      }
 
-    let registration;
-    if (cancelledRegistration) {
-      // Reactivate the cancelled registration
-      registration = await db.registration.update({
-        where: { id: cancelledRegistration.id },
-        data: {
+      return NextResponse.json(
+        {
+          registration: result.registration,
           status: "CONFIRMED",
-          formData: formData || cancelledRegistration.formData || {},
-          registeredAt: new Date(),
-          cancelledAt: null,
+          message: "Successfully registered for the event",
+          qrCode: result.registration.qrCode,
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          event: {
-            select: {
-              id: true,
-              title: true,
-              startDate: true,
-            },
-          },
-        },
-      });
-    } else {
-      // Create new registration
-      registration = await db.registration.create({
-        data: {
-          userId: user.id,
-          eventId: id,
-          formData: formData || {},
-          status: "CONFIRMED",
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          event: {
-            select: {
-              id: true,
-              title: true,
-              startDate: true,
-            },
-          },
-        },
-      });
+        { status: 201 }
+      );
     }
 
-    // Send registration confirmation email
+    // WAITLISTED branch
     try {
-      await sendRegistrationConfirmation(
-        registration.user.email,
-        registration.user.name || "User",
-        registration.event.title,
-        {
-          startDate: event.startDate,
-          endDate: event.endDate,
-          venue: event.venue,
-          category: event.category,
-        },
+      await sendWaitlistJoinedEmail(
+        user.email,
+        user.name || "User",
+        event.title,
+        result.waitlistPosition ?? 1,
         event.org?.name
       );
-    } catch (emailError) {
-      console.error("Error sending registration confirmation email:", emailError);
-      // Don't fail the registration if email fails
+    } catch (err) {
+      console.error("Error sending waitlist email:", err);
+    }
+
+    try {
+      await db.notification.create({
+        data: {
+          type: "REGISTRATION_WAITLISTED",
+          title: "Added to waitlist",
+          message: `You're #${result.waitlistPosition ?? 1} on the waitlist for "${event.title}". We'll email you if a spot opens.`,
+          userId: user.id,
+          link: "/my-registrations",
+        },
+      });
+    } catch (err) {
+      console.error("Error creating notification:", err);
     }
 
     return NextResponse.json(
       {
-        registration,
-        message: "Successfully registered for the event",
-        qrCode: registration.qrCode,
+        registration: result.registration,
+        status: "WAITLISTED",
+        waitlistPosition: result.waitlistPosition ?? 1,
+        message: "You've been added to the waitlist",
       },
       { status: 201 }
     );

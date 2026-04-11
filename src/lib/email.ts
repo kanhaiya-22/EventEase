@@ -105,9 +105,11 @@ export async function sendRegistrationConfirmation(
     venue: string;
     category?: string;
   },
-  collegeName?: string
+  collegeName?: string,
+  options?: { wasPromoted?: boolean }
 ) {
   const collegeDisplay = collegeName || "EventEase";
+  const wasPromoted = options?.wasPromoted === true;
 
   const startStr = eventDetails
     ? new Date(eventDetails.startDate).toLocaleString("en-IN", {
@@ -135,6 +137,16 @@ export async function sendRegistrationConfirmation(
             </div>`
     : "";
 
+  const promotedBanner = wasPromoted
+    ? `
+            <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 14px 18px; border-radius: 6px; margin: 0 0 18px;">
+              <p style="margin: 0; color: #065f46;"><strong>Good news!</strong> A spot opened up and you've been moved off the waitlist. Your seat is now confirmed.</p>
+            </div>`
+    : "";
+
+  const headerTitle = wasPromoted ? "You're In!" : "Registration Confirmed!";
+  const subjectPrefix = wasPromoted ? "You're confirmed" : "Registration Confirmed";
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -145,10 +157,11 @@ export async function sendRegistrationConfirmation(
             <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
           </div>
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; color: #ffffff;">Registration Confirmed!</h1>
+            <h1 style="margin: 0; color: #ffffff;">${headerTitle}</h1>
           </div>
           <div style="padding: 30px; background: #f9f9f9;">
             <p>Hello ${name},</p>
+            ${promotedBanner}
             <p>Thank you for registering for <strong>${eventTitle}</strong>.</p>
             ${eventDetailsBlock}
             <p>Your registration has been successfully confirmed. You can now access the event details and check-in when the event starts.</p>
@@ -170,7 +183,55 @@ export async function sendRegistrationConfirmation(
 
   return sendEmail({
     to: email,
-    subject: `Registration Confirmed - ${eventTitle}`,
+    subject: `${subjectPrefix} - ${eventTitle}`,
+    html,
+  });
+}
+
+/**
+ * Send "you've been added to the waitlist" email
+ */
+export async function sendWaitlistJoinedEmail(
+  email: string,
+  name: string,
+  eventTitle: string,
+  position: number,
+  collegeName?: string
+) {
+  const collegeDisplay = collegeName || "EventEase";
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background: #f4f4f5;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: #415a77; color: #ffffff; padding: 16px 30px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: #ffffff;">${collegeDisplay}</h2>
+          </div>
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; color: #ffffff;">You're on the Waitlist</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <p>Hello ${name},</p>
+            <p><strong>${eventTitle}</strong> is currently full, but you've been added to the waitlist.</p>
+            <div style="background: white; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0 0 6px; color: #92400e;"><strong>Your position:</strong> #${position}</p>
+              <p style="margin: 0; font-size: 14px; color: #555;">If a spot opens up, you'll be promoted automatically and notified by email.</p>
+            </div>
+            <p>You can leave the waitlist any time from your dashboard.</p>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/my-registrations" style="display: inline-block; padding: 12px 30px; background: #667eea; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 15px;">View My Registrations</a>
+          </div>
+          <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+            <p style="margin: 0; font-size: 13px; color: #666;">&copy; 2026 ${collegeDisplay} &middot; Powered by EventEase</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Waitlisted for ${eventTitle}`,
     html,
   });
 }

@@ -59,10 +59,14 @@ export default async function EventDetailPage({
       },
       _count: {
         select: {
-          registrations: { where: { status: { not: "CANCELLED" } } },
+          registrations: { where: { status: "CONFIRMED" } },
         },
       },
     },
+  });
+
+  const waitlistCount = await db.registration.count({
+    where: { eventId: id, status: "WAITLISTED" },
   });
 
   if (!event) {
@@ -297,8 +301,13 @@ export default async function EventDetailPage({
                       isFull ? "text-red-400" : "text-green-400"
                     }`}
                   >
-                    {spotsAvailable}
+                    {Math.max(0, spotsAvailable)}
                   </p>
+                  {isFull && waitlistCount > 0 && (
+                    <p className="text-xs text-amber-300 mt-1">
+                      {waitlistCount} on waitlist
+                    </p>
+                  )}
                 </div>
 
                 {/* Registration Status */}
@@ -309,12 +318,24 @@ export default async function EventDetailPage({
                       <p className="text-xs mt-1">Check event details in your dashboard</p>
                     </div>
                   ) : userRegistration ? (
-                    <div className="bg-green-900 text-green-400 p-4 rounded-lg text-center">
-                      <p className="font-semibold">✓ You're Registered</p>
-                      <p className="text-xs mt-1">QR Code: {userRegistration.qrCode}</p>
-                    </div>
+                    userRegistration.status === "WAITLISTED" ? (
+                      <div className="bg-amber-900/40 text-amber-300 p-4 rounded-lg text-center border border-amber-700/50">
+                        <p className="font-semibold">⏳ You&apos;re on the waitlist</p>
+                        <p className="text-xs mt-1">We&apos;ll email you if a spot opens up.</p>
+                      </div>
+                    ) : (
+                      <div className="bg-green-900 text-green-400 p-4 rounded-lg text-center">
+                        <p className="font-semibold">✓ You&apos;re Registered</p>
+                        <p className="text-xs mt-1">QR Code: {userRegistration.qrCode}</p>
+                      </div>
+                    )
                   ) : (
-                    <EventRegisterButton eventId={event.id} isFull={isFull} />
+                    <EventRegisterButton
+                      eventId={event.id}
+                      isFull={isFull}
+                      waitlistEnabled={event.waitlistEnabled}
+                      waitlistCount={waitlistCount}
+                    />
                   )
                 ) : (
                   <a

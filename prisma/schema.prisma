@@ -179,6 +179,7 @@ model Event {
   endDate      DateTime
   venue        String
   capacity     Int
+  waitlistEnabled Boolean    @default(true)
   posterUrl    String?
   documents    Json          @default("[]")
   status       EventStatus   @default(DRAFT)

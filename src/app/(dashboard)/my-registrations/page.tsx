@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import StudentQRDisplay from "@/components/events/student-qr-display";
 import { CancelRegistrationButton } from "@/components/registrations/cancel-registration-button";
 import { EventStatusBadge } from "@/components/events/event-status-badge";
-import { QrCode, CheckCircle2, LogIn } from "lucide-react";
+import { QrCode, CheckCircle2, LogIn, Hourglass } from "lucide-react";
 
 export default async function MyRegistrationsPage() {
   const session = await auth();
@@ -24,8 +24,11 @@ export default async function MyRegistrationsPage() {
     redirect("/login");
   }
 
-  const registrations = await db.registration.findMany({
-    where: { userId: user.id, status: "CONFIRMED" },
+  const allRegistrations = await db.registration.findMany({
+    where: {
+      userId: user.id,
+      status: { in: ["CONFIRMED", "WAITLISTED"] },
+    },
     include: {
       event: {
         select: {
@@ -41,7 +44,24 @@ export default async function MyRegistrationsPage() {
     orderBy: { registeredAt: "desc" },
   });
 
-  if (registrations.length === 0) {
+  const registrations = allRegistrations.filter((r) => r.status === "CONFIRMED");
+  const waitlisted = allRegistrations.filter((r) => r.status === "WAITLISTED");
+
+  // Compute waitlist position for each waitlisted registration in a single query.
+  const waitlistedWithPosition = await Promise.all(
+    waitlisted.map(async (reg) => {
+      const ahead = await db.registration.count({
+        where: {
+          eventId: reg.eventId,
+          status: "WAITLISTED",
+          registeredAt: { lt: reg.registeredAt },
+        },
+      });
+      return { ...reg, position: ahead + 1 };
+    })
+  );
+
+  if (registrations.length === 0 && waitlistedWithPosition.length === 0) {
     return (
       <div className="space-y-8">
         <div>
@@ -139,6 +159,59 @@ export default async function MyRegistrationsPage() {
                   </div>
                 )}
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Waitlisted Events */}
+      {waitlistedWithPosition.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Hourglass className="h-5 w-5 text-amber-600" />
+            On the Waitlist
+          </h2>
+          <div className="space-y-3">
+            {waitlistedWithPosition.map((reg) => (
+              <Card key={reg.id} className="border-amber-200 bg-amber-50/50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-lg">{reg.event.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        📅{" "}
+                        {new Date(reg.event.startDate).toLocaleDateString("en-IN", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        📍 {reg.event.venue}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                        Waitlist · #{reg.position}
+                      </span>
+                      <EventStatusBadge status={reg.event.status} size="sm" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-amber-800 mb-3">
+                    We&apos;ll email you the moment a spot opens up. You can leave the
+                    waitlist any time.
+                  </p>
+                  <div className="flex justify-end">
+                    <CancelRegistrationButton
+                      registrationId={reg.id}
+                      eventTitle={reg.event.title}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>

@@ -57,6 +57,7 @@ export default function EditEventPage() {
     capacity: "",
     posterUrl: "",
     tags: "",
+    waitlistEnabled: true,
   });
 
   const [mediaPreview, setMediaPreview] = useState<{ url: string; type: "image" | "video" } | null>(null);
@@ -88,6 +89,7 @@ export default function EditEventPage() {
           capacity: event.capacity.toString(),
           posterUrl: event.posterUrl || "",
           tags: event.tags.join(", "),
+          waitlistEnabled: event.waitlistEnabled !== false,
         });
 
         if (event.posterUrl) {
@@ -244,6 +246,7 @@ export default function EditEventPage() {
         endDate: endDateTime,
         venue: formData.venue,
         capacity: parseInt(String(formData.capacity).trim()),
+        waitlistEnabled: formData.waitlistEnabled,
         posterUrl: formData.posterUrl || undefined,
         documents: documents,
         tags: formData.tags
@@ -449,6 +452,31 @@ export default function EditEventPage() {
                 min="1"
                 className="mt-2"
               />
+            </div>
+
+            {/* Waitlist toggle */}
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.waitlistEnabled}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      waitlistEnabled: e.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                />
+                <div>
+                  <p className="text-sm font-semibold">Enable waitlist</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When the event is full, students can join a waitlist and will
+                    be auto-promoted (oldest first) if a confirmed registration is
+                    cancelled.
+                  </p>
+                </div>
+              </label>
             </div>
 
             {/* Event Media */}

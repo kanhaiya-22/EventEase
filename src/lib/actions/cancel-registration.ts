@@ -3,7 +3,11 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { sendRegistrationCancellation } from "@/lib/email";
+import {
+  sendRegistrationCancellation,
+  sendRegistrationConfirmation,
+} from "@/lib/email";
+import { promoteFromWaitlist } from "@/lib/waitlist";
 
 export async function cancelRegistration(registrationId: string) {
   try {
@@ -46,6 +50,8 @@ export async function cancelRegistration(registrationId: string) {
       return { success: false, error: "Registration is already cancelled" };
     }
 
+    const wasConfirmed = registration.status === "CONFIRMED";
+
     // Soft cancel — preserve the record
     await db.registration.update({
       where: { id: registrationId },
@@ -59,6 +65,50 @@ export async function cancelRegistration(registrationId: string) {
     await db.attendance.deleteMany({
       where: { registrationId },
     });
+
+    // If a confirmed seat freed up, try to promote the next waitlisted user.
+    let promoted: Awaited<ReturnType<typeof promoteFromWaitlist>> = null;
+    if (wasConfirmed) {
+      try {
+        promoted = await promoteFromWaitlist(registration.event.id);
+      } catch (promoteErr) {
+        console.error("Error promoting from waitlist:", promoteErr);
+      }
+    }
+
+    if (promoted) {
+      try {
+        await db.notification.create({
+          data: {
+            type: "REGISTRATION_CONFIRMED",
+            title: "You're off the waitlist!",
+            message: `A spot opened up for "${promoted.event.title}" — your seat is now confirmed.`,
+            userId: promoted.userId,
+            link: "/my-registrations",
+          },
+        });
+      } catch (notifErr) {
+        console.error("Error creating promotion notification:", notifErr);
+      }
+
+      try {
+        await sendRegistrationConfirmation(
+          promoted.user.email,
+          promoted.user.name || "User",
+          promoted.event.title,
+          {
+            startDate: promoted.event.startDate,
+            endDate: promoted.event.endDate,
+            venue: promoted.event.venue,
+            category: promoted.event.category,
+          },
+          promoted.event.org?.name,
+          { wasPromoted: true }
+        );
+      } catch (emailErr) {
+        console.error("Error sending promotion email:", emailErr);
+      }
+    }
 
     // Notify the event organizer
     try {
