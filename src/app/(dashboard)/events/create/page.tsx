@@ -6,8 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Upload, X, FileText } from "lucide-react";
+import { Calendar, MapPin, Users, Upload, X, FileText, Sparkles, Loader2 } from "lucide-react";
 import { createEvent } from "@/lib/actions/events";
+import { AiEventAssist } from "@/components/events/ai-event-assist";
+import type { AiSuggestResponse } from "@/lib/validators/event-ai";
+
+function splitIsoDateTime(iso: string): { date: string; time: string } {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso);
+  if (match) return { date: match[1], time: match[2] };
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
 
 const categories = [
   "TECHNICAL",
@@ -42,6 +56,9 @@ export default function CreateEventPage() {
   });
   const [mediaPreview, setMediaPreview] = useState<{ url: string; type: "image" | "video" } | null>(null);
   const [documents, setDocuments] = useState<Array<{ url: string; name: string }>>([]);
+  const [preAiSnapshot, setPreAiSnapshot] = useState<typeof formData | null>(null);
+  const [generatingPoster, setGeneratingPoster] = useState(false);
+  const [posterError, setPosterError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -148,6 +165,82 @@ export default function CreateEventPage() {
     setDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleAiSuggestion = (s: AiSuggestResponse) => {
+    setFormData((prev) => {
+      setPreAiSnapshot((existing) => existing ?? prev);
+      const start = splitIsoDateTime(s.suggestedStartDate);
+      const end = splitIsoDateTime(s.suggestedEndDate);
+      const isFreshForm = !prev.title && !prev.description && !prev.venue;
+
+      return {
+        ...prev,
+        title: prev.title || s.title,
+        description: prev.description || s.description,
+        category: isFreshForm ? s.category : prev.category,
+        startDate: prev.startDate || start.date,
+        startTime: prev.startDate ? prev.startTime : start.time || prev.startTime,
+        endDate: prev.endDate || end.date,
+        endTime: prev.endDate ? prev.endTime : end.time || prev.endTime,
+        venue: prev.venue || s.venue,
+        capacity: prev.capacity || String(s.suggestedCapacity),
+        tags: prev.tags || s.tags.join(", "),
+      };
+    });
+  };
+
+  const handleClearAiFill = () => {
+    if (preAiSnapshot) {
+      setFormData(preAiSnapshot);
+      setPreAiSnapshot(null);
+    }
+  };
+
+  const handleGeneratePoster = async () => {
+    if (!formData.title.trim()) {
+      setPosterError("Add an event title first.");
+      return;
+    }
+
+    setGeneratingPoster(true);
+    setPosterError("");
+
+    try {
+      const startIso =
+        formData.startDate && formData.startTime
+          ? `${formData.startDate}T${formData.startTime}:00`
+          : undefined;
+
+      const res = await fetch("/api/events/generate-poster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title.trim(),
+          category: formData.category,
+          tags: formData.tags
+            ? formData.tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : [],
+          description: formData.description.trim() || undefined,
+          startDate: startIso,
+          venue: formData.venue.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate poster");
+      }
+
+      setFormData((prev) => ({ ...prev, posterUrl: data.posterUrl }));
+      setMediaPreview({ url: data.posterUrl, type: "image" });
+    } catch (err) {
+      setPosterError(
+        err instanceof Error ? err.message : "Failed to generate poster",
+      );
+    } finally {
+      setGeneratingPoster(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -208,6 +301,12 @@ export default function CreateEventPage() {
           Create a new event for your college. Fill in the details below.
         </p>
       </div>
+
+      <AiEventAssist
+        onSuggestion={handleAiSuggestion}
+        onClearAiFill={preAiSnapshot ? handleClearAiFill : undefined}
+        disabled={loading || uploading}
+      />
 
       <Card>
         <CardContent className="pt-8">
@@ -424,7 +523,54 @@ export default function CreateEventPage() {
               <Label className="text-base font-semibold mb-4 block">
                 Event Media (Image or Video - Optional)
               </Label>
-              
+
+              {/* AI Poster Generation */}
+              <div className="mb-4 rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Generate poster with AI
+                      </p>
+                      <p className="text-xs text-blue-700/80">
+                        Free, no setup. Uses your event title, category, and tags.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleGeneratePoster}
+                    disabled={
+                      generatingPoster ||
+                      uploading ||
+                      !formData.title.trim()
+                    }
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {generatingPoster ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating... (15-30s)
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {formData.posterUrl ? "Regenerate poster" : "Generate poster"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {posterError && (
+                  <p className="mt-2 text-xs text-red-700">{posterError}</p>
+                )}
+                {!formData.title.trim() && (
+                  <p className="mt-2 text-xs text-blue-700/70">
+                    Fill in the event title above to enable generation.
+                  </p>
+                )}
+              </div>
+
               {/* File Upload Area */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
                 <label className="cursor-pointer">
