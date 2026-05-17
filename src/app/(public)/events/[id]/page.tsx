@@ -1,9 +1,32 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import Link from "next/link";
 import EventRegisterButton from "@/components/events/event-register-button";
-import { Download, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  MapPin,
+  Ticket,
+  Users,
+} from "lucide-react";
 import { EventStatusBadge } from "@/components/events/event-status-badge";
+import { cn } from "@/lib/utils";
+
+const CATEGORY_ACCENT: Record<string, string> = {
+  TECHNICAL: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  CULTURAL: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
+  WORKSHOP: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  SEMINAR: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  HACKATHON: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  SPORTS: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  SOCIAL: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+  OTHER: "bg-muted text-muted-foreground",
+};
 
 interface EventDetailPageProps {
   params: Promise<{
@@ -107,63 +130,82 @@ export default async function EventDetailPage({
     console.error("Failed to parse customFields:", e);
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
-        <a
-          href="/events"
-          className="inline-flex items-center text-blue-400 hover:text-blue-300 mb-8 transition-colors"
-        >
-          ← Back to Events
-        </a>
+  const capacityPct = event.capacity
+    ? Math.min(
+        Math.round((event._count.registrations / event.capacity) * 100),
+        100
+      )
+    : 0;
+  const capacityTone = isFull
+    ? "bg-destructive"
+    : capacityPct >= 80
+      ? "bg-amber-500"
+      : "bg-emerald-500";
+  const categoryAccent =
+    CATEGORY_ACCENT[event.category] ?? CATEGORY_ACCENT.OTHER;
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="container mx-auto px-4 py-8">
+        <Link
+          href="/events"
+          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Events
+        </Link>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             {event.posterUrl && (
-              <div className="mb-8 rounded-lg overflow-hidden h-96 bg-slate-700">
+              <div className="h-96 overflow-hidden rounded-xl border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={event.posterUrl}
                   alt={event.title}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               </div>
             )}
 
-            <div className="bg-slate-800 rounded-lg p-8 mb-8">
+            <div className="rounded-xl border bg-card p-6 sm:p-8 text-card-foreground shadow-sm">
               <div className="mb-6">
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <span className="bg-blue-900 text-blue-400 px-4 py-2 rounded-full text-sm font-semibold">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold",
+                      categoryAccent
+                    )}
+                  >
                     {event.category}
                   </span>
                   <EventStatusBadge status={event.status} />
                   {event.org && (
-                    <span className="bg-purple-900 text-purple-300 px-4 py-2 rounded-full text-sm font-semibold">
-                      📚 {event.org.name}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      {event.org.name}
                     </span>
                   )}
                 </div>
-                <h1 className="text-4xl font-bold text-white mb-4">
+                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                   {event.title}
                 </h1>
               </div>
 
-              <div className="prose prose-invert max-w-none mb-8">
-                <p className="text-slate-300 leading-relaxed">
-                  {event.description}
-                </p>
-              </div>
+              <p className="whitespace-pre-line text-base leading-relaxed text-muted-foreground">
+                {event.description}
+              </p>
 
               {event.tags && event.tags.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-white mb-3">
+                <div className="mt-8">
+                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                     Tags
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {event.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="bg-slate-700 text-slate-300 px-3 py-1 rounded-full text-sm"
+                        className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground"
                       >
                         #{tag}
                       </span>
@@ -172,29 +214,29 @@ export default async function EventDetailPage({
                 </div>
               )}
 
-              {/* Documents/Rulebook Section */}
+              {/* Documents / Rulebooks */}
               {documents && documents.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                <div className="mt-8">
+                  <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    <FileText className="h-4 w-4" />
                     Documents & Rulebooks
                   </h3>
                   <div className="space-y-2">
                     {documents.map((doc, index) => (
                       <a
                         key={index}
-                        href={`/api/documents/download?url=${encodeURIComponent(doc.url)}&name=${encodeURIComponent(doc.name)}`}
-                        className="block bg-slate-700 hover:bg-slate-600 rounded-lg p-3 transition-colors"
+                        href={`/api/documents/download?url=${encodeURIComponent(
+                          doc.url
+                        )}&name=${encodeURIComponent(doc.name)}`}
+                        className="group flex items-center justify-between rounded-lg border bg-background p-3 transition-colors hover:bg-accent"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                            <span className="text-slate-200 font-medium truncate">
-                              {doc.name}
-                            </span>
-                          </div>
-                          <Download className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                        <div className="flex min-w-0 items-center gap-3">
+                          <FileText className="h-5 w-5 shrink-0 text-primary" />
+                          <span className="truncate font-medium text-foreground">
+                            {doc.name}
+                          </span>
                         </div>
+                        <Download className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
                       </a>
                     ))}
                   </div>
@@ -203,21 +245,30 @@ export default async function EventDetailPage({
             </div>
 
             {/* Organizer */}
-            <div className="bg-slate-800 rounded-lg p-8">
-              <h3 className="text-xl font-bold text-white mb-4">Organizer</h3>
-              <div className="flex items-center space-x-4">
-                {event.organizer.avatarUrl && (
+            <div className="rounded-xl border bg-card p-6 sm:p-8 text-card-foreground shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-foreground">
+                Organizer
+              </h3>
+              <div className="flex items-center gap-4">
+                {event.organizer.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={event.organizer.avatarUrl}
                     alt={event.organizer.name}
-                    className="w-16 h-16 rounded-full"
+                    className="h-14 w-14 rounded-full border object-cover"
                   />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                    {event.organizer.name?.[0]?.toUpperCase() ?? "?"}
+                  </div>
                 )}
-                <div>
-                  <p className="text-white font-semibold">
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">
                     {event.organizer.name}
                   </p>
-                  <p className="text-slate-400">{event.organizer.email}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {event.organizer.email}
+                  </p>
                 </div>
               </div>
             </div>
@@ -225,17 +276,19 @@ export default async function EventDetailPage({
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            {/* Event Details Card */}
-            <div className="bg-slate-800 rounded-lg p-6 sticky top-4">
-              <h3 className="text-xl font-bold text-white mb-6">
+            <div className="sticky top-4 rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
+              <h3 className="mb-6 text-lg font-semibold text-foreground">
                 Event Details
               </h3>
 
               <div className="space-y-6">
                 {/* Date */}
                 <div>
-                  <p className="text-slate-400 text-sm mb-2">📅 Date</p>
-                  <p className="text-white font-semibold">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Date
+                  </p>
+                  <p className="font-semibold text-foreground">
                     {new Date(event.startDate).toLocaleDateString("en-IN", {
                       weekday: "long",
                       year: "numeric",
@@ -243,12 +296,13 @@ export default async function EventDetailPage({
                       day: "numeric",
                     })}
                   </p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
                     {new Date(event.startDate).toLocaleTimeString("en-IN", {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}{" "}
-                    -{" "}
+                    –{" "}
                     {new Date(event.endDate).toLocaleTimeString("en-IN", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -258,36 +312,35 @@ export default async function EventDetailPage({
 
                 {/* Venue */}
                 <div>
-                  <p className="text-slate-400 text-sm mb-2">📍 Venue</p>
-                  <p className="text-white font-semibold">{event.venue}</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Venue
+                  </p>
+                  <p className="font-semibold text-foreground">{event.venue}</p>
                 </div>
 
                 {/* Capacity */}
                 <div>
-                  <p className="text-slate-400 text-sm mb-2">👥 Capacity</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
+                    Capacity
+                  </p>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-white">
+                      <span className="font-medium text-foreground">
                         {event._count.registrations}/{event.capacity}
                       </span>
-                      <span className="text-slate-400">
-                        {Math.round(
-                          (event._count.registrations / event.capacity) * 100
-                        )}
-                        %
+                      <span className="text-muted-foreground">
+                        {capacityPct}%
                       </span>
                     </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className={`h-2 rounded-full transition-all ${
-                          isFull ? "bg-red-500" : "bg-blue-500"
-                        }`}
-                        style={{
-                          width: `${Math.min(
-                            (event._count.registrations / event.capacity) * 100,
-                            100
-                          )}%`,
-                        }}
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          capacityTone
+                        )}
+                        style={{ width: `${capacityPct}%` }}
                       />
                     </div>
                   </div>
@@ -295,16 +348,20 @@ export default async function EventDetailPage({
 
                 {/* Spots Available */}
                 <div>
-                  <p className="text-slate-400 text-sm mb-2">🎟️ Spots Available</p>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Ticket className="h-3.5 w-3.5" />
+                    Spots Available
+                  </p>
                   <p
-                    className={`text-2xl font-bold ${
-                      isFull ? "text-red-400" : "text-green-400"
-                    }`}
+                    className={cn(
+                      "text-2xl font-bold",
+                      isFull ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                    )}
                   >
                     {Math.max(0, spotsAvailable)}
                   </p>
                   {isFull && waitlistCount > 0 && (
-                    <p className="text-xs text-amber-300 mt-1">
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                       {waitlistCount} on waitlist
                     </p>
                   )}
@@ -313,20 +370,33 @@ export default async function EventDetailPage({
                 {/* Registration Status */}
                 {session ? (
                   isOrganizer ? (
-                    <div className="bg-blue-900 text-blue-400 p-4 rounded-lg text-center">
-                      <p className="font-semibold">📋 You're the Organizer</p>
-                      <p className="text-xs mt-1">Check event details in your dashboard</p>
+                    <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-center">
+                      <p className="font-semibold text-primary">
+                        You&apos;re the Organizer
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Manage this event from your dashboard
+                      </p>
                     </div>
                   ) : userRegistration ? (
                     userRegistration.status === "WAITLISTED" ? (
-                      <div className="bg-amber-900/40 text-amber-300 p-4 rounded-lg text-center border border-amber-700/50">
-                        <p className="font-semibold">⏳ You&apos;re on the waitlist</p>
-                        <p className="text-xs mt-1">We&apos;ll email you if a spot opens up.</p>
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+                        <p className="font-semibold text-amber-700 dark:text-amber-300">
+                          ⏳ You&apos;re on the waitlist
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          We&apos;ll email you if a spot opens up.
+                        </p>
                       </div>
                     ) : (
-                      <div className="bg-green-900 text-green-400 p-4 rounded-lg text-center">
-                        <p className="font-semibold">✓ You&apos;re Registered</p>
-                        <p className="text-xs mt-1">QR Code: {userRegistration.qrCode}</p>
+                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+                        <p className="flex items-center justify-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
+                          <CheckCircle2 className="h-4 w-4" />
+                          You&apos;re Registered
+                        </p>
+                        <p className="mt-1 break-all text-xs text-muted-foreground">
+                          QR Code: {userRegistration.qrCode}
+                        </p>
                       </div>
                     )
                   ) : (
@@ -338,12 +408,12 @@ export default async function EventDetailPage({
                     />
                   )
                 ) : (
-                  <a
+                  <Link
                     href="/login"
-                    className="block w-full py-3 rounded-lg font-semibold bg-blue-600 text-white text-center hover:bg-blue-700 transition-colors"
+                    className="block w-full rounded-lg bg-primary py-3 text-center font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                   >
                     Login to Register
-                  </a>
+                  </Link>
                 )}
               </div>
             </div>

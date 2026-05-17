@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { EventFilters } from "@/components/events/event-filters";
 import { EventCard } from "@/components/events/event-card";
 import { Suspense } from "react";
+import { CalendarSearch, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export const metadata = {
   title: "Events",
@@ -87,37 +89,68 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     orderBy,
   });
 
-  const resultText = q || category
-    ? `${events.length} event${events.length !== 1 ? "s" : ""} found`
-    : `${events.length} published events`;
+  const hasFilters = Boolean(q || (category && category !== "ALL"));
+  const resultText = hasFilters
+    ? `${events.length} event${events.length !== 1 ? "s" : ""} match your filters`
+    : `${events.length} event${events.length !== 1 ? "s" : ""} happening`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            {userOrgName ? `${userOrgName} Events` : "Events"}
-          </h1>
-          <p className="text-slate-300">{resultText}</p>
+    <div className="min-h-screen bg-background">
+      {/* Hero strip — soft tinted gradient behind the title only */}
+      <div className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-background">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,theme(colors.primary/15),transparent_60%)]"
+        />
+        <div className="container relative mx-auto px-4 py-12 sm:py-16">
+          <div className="flex flex-col items-start gap-3">
+            {userOrgName && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                {userOrgName}
+              </span>
+            )}
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              {userOrgName ? `What's on at ${userOrgName}` : "Discover events"}
+            </h1>
+            <p className="max-w-2xl text-base text-muted-foreground">
+              Browse upcoming workshops, hackathons, cultural fests and more.{" "}
+              <span className="font-medium text-foreground">{resultText}</span>.
+            </p>
+          </div>
         </div>
+      </div>
 
+      {/* Listing */}
+      <div className="container mx-auto px-4 py-8 sm:py-10">
         <Suspense fallback={null}>
           <EventFilters />
         </Suspense>
 
         {events.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-400 text-lg">
-              {q || category ? "No events match your filters." : "No events published yet."}
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-card/50 px-6 py-16 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <CalendarSearch className="h-7 w-7 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {hasFilters ? "No events match your filters" : "No events yet"}
+            </h2>
+            <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
+              {hasFilters
+                ? "Try clearing a filter, broadening your search, or picking a different category."
+                : "Check back soon — new events are added regularly."}
             </p>
-            <p className="text-slate-500 mt-2">
-              {q || category
-                ? "Try adjusting your search or filters."
-                : "Check back soon for upcoming events!"}
-            </p>
+            {hasFilters && (
+              <Link
+                href="/events"
+                className="mt-5 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
+              >
+                Clear all filters
+              </Link>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}

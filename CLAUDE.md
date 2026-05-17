@@ -19,12 +19,12 @@ npm run dev                    # localhost:3000
 
 ## Commands
 - `npm run dev` — Dev server (localhost:3000)
-- `npm run build` — Production build
+- `npm run build` — Runs `prisma generate && next build` (no separate generate step needed in CI)
 - `npm run lint` — ESLint
-- `npm run start` — Start production server
-- `npm run migrate:cloudinary` — Migrate local uploads to Cloudinary
-- `npx prisma generate` — Regenerate client after schema changes
-- `npx prisma migrate dev` — Create and apply migrations
+- `npm run start` — Production server, binds `0.0.0.0` on `$PORT` (default 3000) — set up for Railway/cloud deploy
+- `npm run migrate:cloudinary` — Migrate local uploads to Cloudinary. Uses `tsx`, which is **not** in `devDependencies` — relies on `npx tsx` resolving on demand.
+- `npx prisma generate` — Regenerate client after schema changes (also runs automatically via `postinstall`)
+- `npx prisma migrate dev` — Create and apply migrations. **Not** in the build step — Railway runs migrations as a separate deploy phase (see commit `3a5970c`).
 - `npx prisma studio` — Database GUI
 - `npx prisma db push` — Push schema without migration (dev only)
 
@@ -53,7 +53,6 @@ src/
 │   ├── (dashboard)/               # Protected routes (sidebar layout)
 │   │   ├── dashboard/page.tsx     # Stats, recent activity, organizer analytics
 │   │   ├── events/create/         # Create event form
-│   │   ├── events/[slug]/         # Dashboard event detail
 │   │   ├── my-registrations/      # Student QR codes + cancel registration
 │   │   ├── check-in/              # Manual QR check-in
 │   │   ├── certificates/          # Student certificates
@@ -73,10 +72,10 @@ src/
 │   │   ├── about/                 # About page
 │   │   ├── contact/               # Contact page
 │   │   ├── events/page.tsx        # Events with search, filter, sort
-│   │   ├── events/[id]/page.tsx   # Event detail + register (id route)
-│   │   ├── events/[slug]/         # Event detail by slug
+│   │   ├── events/[id]/page.tsx   # Event detail + register (id-only — there is no [slug] public route despite the `slug` column existing)
 │   │   └── verify/[code]/page.tsx # Public certificate verification
 │   ├── verification-pending/      # Page shown to unverified organizers
+│   ├── complete-profile/          # First-login onboarding for OAuth users (see Auth Flow)
 │   ├── admin/                     # Admin panel (separate layout)
 │   │   ├── page.tsx               # Admin dashboard
 │   │   ├── colleges/              # Manage organizations (list/create/[id])
@@ -125,6 +124,7 @@ src/
 │   ├── migration.ts               # Cloudinary migration helpers
 │   ├── college-domain-map.ts      # email-domain → CollegeInfo lookup table (UP institutions)
 │   ├── resolve-org.ts             # resolveOrgFromEmail() — findOrCreate Organization on register
+│   ├── waitlist.ts                # promoteFromWaitlist() — atomic FIFO promotion on capacity free-up
 │   ├── data/
 │   │   └── iet-events.ts          # static seed-style event data
 │   ├── validators/
@@ -184,11 +184,12 @@ Schema in [prisma/schema.prisma](prisma/schema.prisma):
 - **ADMIN** — Approve/reject events and organizer requests, manage colleges (organizations) and users, platform analytics, Cloudinary migration
 
 ## Auth Flow
-- JWT strategy (not database sessions); session augmented with `user.id`, `user.role`, `user.department`, `user.isVerified`.
+- JWT strategy (not database sessions); session augmented with `user.id`, `user.role`, `user.department`, `user.isVerified`, and `user.profileCompleted`.
 - Credentials: email + bcrypt-hashed password (salt 12). Google OAuth also supported.
 - **Org resolution on register** — [registerUser()](src/lib/actions/auth.ts) calls [resolveOrgFromEmail()](src/lib/resolve-org.ts), which looks the email domain up in [college-domain-map.ts](src/lib/college-domain-map.ts) and `findOrCreate`s the matching `Organization`. Unknown domains → no org assigned (user can still register but is "unaffiliated"). The legacy "IET Lucknow" org is matched by name as a fallback.
+- **OAuth onboarding** — First-time Google OAuth users land with `profileCompleted=false`. [middleware.ts](src/middleware.ts) force-redirects them to `/complete-profile` from any other route, and bounces them off `/complete-profile` once it's true. Credentials signups skip this since registration collects the profile up front.
 - **Organizer verification** — Users who register as ORGANIZER are created with `isVerified=false` and must submit an `OrganizerRequest`. Admin approves/rejects via `/admin/organizer-requests`. Until verified, [middleware.ts](src/middleware.ts) redirects them to `/verification-pending` and blocks `/events/create`, `/organized-events`, `/check-in`, `/admin`.
-- Middleware also protects all dashboard/admin routes and redirects logged-in users away from login/register.
+- **Middleware redirect precedence** (per [src/middleware.ts](src/middleware.ts)): unauth → `/login`; logged-in on auth route with `profileCompleted=false` → `/complete-profile`; logged-in unverified ORGANIZER on auth route → `/verification-pending`; otherwise logged-in on auth route → `/dashboard`. The `profileCompleted` gate runs **before** the organizer-verification gate on protected routes.
 
 ## API Routes Summary
 | Method | Route | Purpose |
@@ -255,7 +256,8 @@ Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `TEST_EM
 - **Multi-college auto-provisioning** — email-domain → Organization mapping, see Auth Flow
 - **Organizer verification flow** — `OrganizerRequest` model + middleware-enforced gate, admin review at `/admin/organizer-requests`
 - **Admin colleges UI** — `/admin/colleges` for managing organizations
-- **Eeva chatbot** — floating widget ([components/chatbot/eeva-chatbot.tsx](src/components/chatbot/eeva-chatbot.tsx)) backed by Groq via `/api/chat`; system prompt includes full platform knowledge
+- **Waitlist with auto-promotion** — when an event hits capacity, new registrations are created as `WAITLISTED`. On cancellation (or any capacity free-up), [promoteFromWaitlist()](src/lib/waitlist.ts) atomically promotes the longest-waiting WAITLISTED row to CONFIRMED inside a Prisma transaction; notification + email are sent *outside* the tx by the caller.
+- **Eeva chatbot** — floating widget ([components/chatbot/eeva-chatbot.tsx](src/components/chatbot/eeva-chatbot.tsx)) backed by Groq SDK via `/api/chat`; system prompt embeds full platform knowledge. Note: `@google/generative-ai` is listed in `package.json` but is **not currently imported anywhere in `src/`** — dead dep, safe to remove unless reintroducing Gemini.
 - **Announcements & Discussion** — org-wide board with threaded comments, emoji reactions, pin/unpin, event linking, notification integration
 - **Notification system** — bell icon with unread badge, dropdown, full notifications page with tabs
 - **Event status state machine** — organizers move status (PUBLISHED→ONGOING→COMPLETED→ARCHIVED, cancel) via [event-status.ts](src/lib/actions/event-status.ts)
@@ -265,5 +267,7 @@ Optional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `TEST_EM
 ## Known Incomplete Areas
 - `src/hooks/` — empty
 - `src/components/auth/` — empty placeholder
-- Certificate PDF generation — `@react-pdf/renderer` is installed but not wired; certificates are stored as URL with HTML rendering
+- Certificate PDF generation — `@react-pdf/renderer` is installed but not wired (TODO, not intentional); certificates are stored as URL with HTML rendering
 - Event validators — event create/update uses inline validation, not extracted to `validators/`
+- **No test runner configured** — no `jest`/`vitest`/`playwright` install, no `test` script in `package.json`. Don't suggest `npm test`. Verification is type-check + lint + manual.
+- **Scratch notes in repo root** — `sync.md` and `sync1.md` are tracked but appear to be WIP planning notes; not gitignored. Confirm with the user before referencing or cleaning up.

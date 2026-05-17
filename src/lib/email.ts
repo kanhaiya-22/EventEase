@@ -56,7 +56,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
       const result = await resend.emails.send({
         from: "onboarding@resend.dev", // Use Resend's test domain
         to: testEmail,
-        subject: `[TEST] ${subject}`,
+        subject: `${subject}`,
         html,
       });
 

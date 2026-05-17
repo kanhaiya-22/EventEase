@@ -1,4 +1,6 @@
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { MapPin, Users, Calendar } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EventCardProps {
   event: {
@@ -15,90 +17,200 @@ interface EventCardProps {
   };
 }
 
+const CATEGORY_STYLES: Record<
+  string,
+  { label: string; emoji: string; accent: string; ring: string }
+> = {
+  TECHNICAL: {
+    label: "Technical",
+    emoji: "💻",
+    accent: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+    ring: "from-blue-500/15 to-blue-500/0",
+  },
+  CULTURAL: {
+    label: "Cultural",
+    emoji: "🎭",
+    accent: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
+    ring: "from-pink-500/15 to-pink-500/0",
+  },
+  WORKSHOP: {
+    label: "Workshop",
+    emoji: "🔧",
+    accent: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+    ring: "from-amber-500/15 to-amber-500/0",
+  },
+  SEMINAR: {
+    label: "Seminar",
+    emoji: "🎤",
+    accent: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+    ring: "from-violet-500/15 to-violet-500/0",
+  },
+  HACKATHON: {
+    label: "Hackathon",
+    emoji: "🚀",
+    accent: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+    ring: "from-orange-500/15 to-orange-500/0",
+  },
+  SPORTS: {
+    label: "Sports",
+    emoji: "⚽",
+    accent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+    ring: "from-emerald-500/15 to-emerald-500/0",
+  },
+  SOCIAL: {
+    label: "Social",
+    emoji: "🎉",
+    accent: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+    ring: "from-rose-500/15 to-rose-500/0",
+  },
+  OTHER: {
+    label: "Other",
+    emoji: "📋",
+    accent: "bg-muted text-muted-foreground",
+    ring: "from-muted-foreground/10 to-muted-foreground/0",
+  },
+};
+
 export function EventCard({ event }: EventCardProps) {
   const spotsLeft = event.capacity - event._count.registrations;
   const isFull = spotsLeft <= 0;
+  const fillPct = Math.min(
+    Math.round((event._count.registrations / event.capacity) * 100),
+    100
+  );
+  const fillTone =
+    fillPct >= 100
+      ? "bg-destructive"
+      : fillPct >= 80
+        ? "bg-amber-500"
+        : "bg-emerald-500";
+
+  const cat = CATEGORY_STYLES[event.category] ?? CATEGORY_STYLES.OTHER;
+  const start = new Date(event.startDate);
+  const day = start.toLocaleDateString("en-IN", { day: "2-digit" });
+  const month = start
+    .toLocaleDateString("en-IN", { month: "short" })
+    .toUpperCase();
 
   return (
-    <a
+    <Link
       href={`/events/${event.id}`}
-      className="group bg-slate-800 rounded-lg overflow-hidden hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1"
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-300",
+        "hover:-translate-y-1 hover:shadow-lg hover:ring-2 hover:ring-primary/20",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      )}
     >
-      {event.posterUrl ? (
-        <div className="relative h-48 overflow-hidden bg-slate-700">
+      {/* Poster / fallback header */}
+      <div className="relative h-44 overflow-hidden bg-muted">
+        {event.posterUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.posterUrl}
             alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          {isFull && (
-            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              FULL
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="relative h-48 bg-gradient-to-br from-blue-900 to-slate-800 flex items-center justify-center">
-          <span className="text-4xl opacity-50">
-            {event.category === "TECHNICAL" ? "💻" :
-             event.category === "CULTURAL" ? "🎭" :
-             event.category === "WORKSHOP" ? "🔧" :
-             event.category === "SEMINAR" ? "🎤" :
-             event.category === "HACKATHON" ? "🚀" :
-             event.category === "SPORTS" ? "⚽" :
-             event.category === "SOCIAL" ? "🎉" : "📋"}
-          </span>
-          {isFull && (
-            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-              FULL
-            </div>
-          )}
-        </div>
-      )}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold text-blue-400 bg-blue-900 px-3 py-1 rounded-full">
-            {event.category}
-          </span>
-          <span className="text-xs text-slate-400">
-            {event._count.registrations} registered
-          </span>
-        </div>
-
-        {event.org && (
-          <div className="mb-2 text-xs font-semibold text-purple-300 bg-purple-900/30 px-2 py-1 rounded inline-block">
-            {event.org.name}
+        ) : (
+          <div
+            className={cn(
+              "flex h-full w-full items-center justify-center bg-gradient-to-br",
+              cat.ring,
+              "to-card"
+            )}
+          >
+            <span className="text-5xl opacity-70 transition-transform duration-500 group-hover:scale-110">
+              {cat.emoji}
+            </span>
           </div>
         )}
 
-        <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+        {/* Date tile */}
+        <div className="absolute left-3 top-3 flex flex-col items-center rounded-lg border bg-background/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
+          <span className="text-lg font-bold leading-none text-foreground">
+            {day}
+          </span>
+          <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">
+            {month}
+          </span>
+        </div>
+
+        {/* Category badge */}
+        <span
+          className={cn(
+            "absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm",
+            cat.accent
+          )}
+        >
+          <span className="text-xs leading-none">{cat.emoji}</span>
+          {cat.label}
+        </span>
+
+        {/* Full overlay */}
+        {isFull && (
+          <div className="absolute bottom-3 right-3 rounded-md bg-destructive px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-destructive-foreground shadow">
+            Full
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        {event.org && (
+          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+            {event.org.name}
+          </span>
+        )}
+
+        <h3 className="line-clamp-2 text-base font-semibold text-foreground transition-colors group-hover:text-primary">
           {event.title}
         </h3>
-        <p className="text-slate-400 text-sm mb-4 line-clamp-2">
-          {event.description}
-        </p>
-        <div className="space-y-2 text-sm text-slate-300">
-          <p className="flex items-center gap-2">
-            <span className="text-slate-500">Venue:</span> {event.venue}
+
+        {event.description && (
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {event.description}
           </p>
-          <p className="flex items-center gap-2">
-            <span className="text-slate-500">Date:</span>{" "}
-            {new Date(event.startDate).toLocaleDateString("en-IN", {
+        )}
+
+        <div className="mt-auto space-y-3 pt-1 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{event.venue}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            {start.toLocaleDateString("en-IN", {
               year: "numeric",
               month: "short",
               day: "numeric",
             })}
-          </p>
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2">
-              <span className="text-slate-500">Capacity:</span> {event.capacity}
-            </p>
-            {!isFull && (
-              <span className="text-xs text-green-400">{spotsLeft} spots left</span>
-            )}
+          </div>
+
+          {/* Capacity bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Users className="h-3.5 w-3.5" />
+                {event._count.registrations}/{event.capacity}
+              </span>
+              {isFull ? (
+                <span className="font-medium text-destructive">
+                  Waitlist only
+                </span>
+              ) : (
+                <span className="font-medium text-foreground">
+                  {spotsLeft} spot{spotsLeft === 1 ? "" : "s"} left
+                </span>
+              )}
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full transition-all", fillTone)}
+                style={{ width: `${fillPct}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
