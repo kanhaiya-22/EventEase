@@ -3,8 +3,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Megaphone, Pin, MessageCircle, Calendar } from "lucide-react";
+import { OrgLogo } from "@/components/ui/org-logo";
+import { Megaphone, Pin, MessageCircle, Calendar } from "lucide-react";
 
 export const metadata = {
   title: "All Announcements — Admin",
@@ -39,7 +39,7 @@ export default async function AdminAnnouncementsPage() {
         select: { id: true, name: true, avatarUrl: true, role: true },
       },
       org: {
-        select: { id: true, name: true, slug: true },
+        select: { id: true, name: true, slug: true, logo: true },
       },
       event: {
         select: { id: true, title: true, slug: true },
@@ -53,10 +53,19 @@ export default async function AdminAnnouncementsPage() {
   });
 
   // Group by org for cleaner display, but keep flat array for the overall view.
-  const byOrgCount = new Map<string, number>();
+  const byOrg = new Map<string, { name: string; logo: string | null; count: number }>();
   for (const a of announcements) {
-    const key = a.org?.name || "Unaffiliated";
-    byOrgCount.set(key, (byOrgCount.get(key) || 0) + 1);
+    const key = a.org?.id || "unaffiliated";
+    const existing = byOrg.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      byOrg.set(key, {
+        name: a.org?.name || "Unaffiliated",
+        logo: a.org?.logo ?? null,
+        count: 1,
+      });
+    }
   }
 
   return (
@@ -76,13 +85,19 @@ export default async function AdminAnnouncementsPage() {
         </Badge>
       </div>
 
-      {byOrgCount.size > 0 && (
+      {byOrg.size > 0 && (
         <div className="flex flex-wrap gap-2">
-          {Array.from(byOrgCount.entries()).map(([name, count]) => (
-            <Badge key={name} variant="outline" className="gap-1">
-              <Building2 className="h-3 w-3" />
-              {name}
-              <span className="text-muted-foreground ml-1">({count})</span>
+          {Array.from(byOrg.entries()).map(([key, info]) => (
+            <Badge key={key} variant="outline" className="gap-1.5 py-1 pl-1 pr-2">
+              <OrgLogo
+                src={info.logo}
+                name={info.name}
+                size="xs"
+                rounded="md"
+                className="border-0"
+              />
+              {info.name}
+              <span className="text-muted-foreground ml-1">({info.count})</span>
             </Badge>
           ))}
         </div>
@@ -100,7 +115,6 @@ export default async function AdminAnnouncementsPage() {
       ) : (
         <div className="space-y-4">
           {announcements.map((a) => {
-            const authorInitial = a.author.name?.[0]?.toUpperCase() || "?";
             const orgName = a.org?.name || "Unaffiliated";
             return (
               <Card key={a.id} className={a.isPinned ? "border-yellow-400" : ""}>
@@ -108,7 +122,12 @@ export default async function AdminAnnouncementsPage() {
                   {/* College name banner */}
                   <div className="flex items-center justify-between gap-3 pb-3 border-b">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Building2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      <OrgLogo
+                        src={a.org?.logo}
+                        name={orgName}
+                        size="sm"
+                        rounded="md"
+                      />
                       <span className="text-sm font-semibold text-blue-900 truncate">
                         {orgName}
                       </span>
@@ -127,23 +146,17 @@ export default async function AdminAnnouncementsPage() {
                   </div>
 
                   {/* Author + metadata */}
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={a.author.avatarUrl || undefined} />
-                      <AvatarFallback>{authorInitial}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{a.author.name}</span>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {a.author.role.toLowerCase()}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          · {formatDate(a.createdAt)}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-semibold mt-2">{a.title}</h3>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{a.author.name}</span>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {a.author.role.toLowerCase()}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        · {formatDate(a.createdAt)}
+                      </span>
                     </div>
+                    <h3 className="text-lg font-semibold mt-2">{a.title}</h3>
                   </div>
 
                   {/* Content */}

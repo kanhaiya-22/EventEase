@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { OrgLogo } from "@/components/ui/org-logo";
 import { Building2, Users, Calendar, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -91,9 +92,7 @@ export default async function CollegesPage() {
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="rounded-lg bg-primary/10 p-2">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
+                    <OrgLogo src={org.logo} name={org.name} size="lg" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg truncate">
                         {org.name}

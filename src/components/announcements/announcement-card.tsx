@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OrgLogo } from "@/components/ui/org-logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,11 @@ interface AnnouncementCardProps {
       avatarUrl: string | null;
       role: string;
     };
+    org?: {
+      id: string;
+      name: string;
+      logo: string | null;
+    } | null;
     event?: {
       id: string;
       title: string;
@@ -119,14 +125,29 @@ export function AnnouncementCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <Avatar className="h-10 w-10">
-              {announcement.author.avatarUrl && (
-                <AvatarImage src={announcement.author.avatarUrl} />
+            <div className="relative">
+              <Avatar className="h-10 w-10">
+                {announcement.author.avatarUrl && (
+                  <AvatarImage src={announcement.author.avatarUrl} />
+                )}
+                <AvatarFallback>
+                  {announcement.author.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {announcement.org && (
+                <span
+                  className="absolute -bottom-1 -right-1 ring-2 ring-card rounded-md"
+                  title={announcement.org.name}
+                >
+                  <OrgLogo
+                    src={announcement.org.logo}
+                    name={announcement.org.name}
+                    size="xs"
+                    rounded="md"
+                  />
+                </span>
               )}
-              <AvatarFallback>
-                {announcement.author.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            </div>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -140,6 +161,9 @@ export function AnnouncementCard({
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
+                {announcement.org && (
+                  <span className="text-foreground/70">{announcement.org.name} · </span>
+                )}
                 {formatRelativeTime(announcement.createdAt)}
               </p>
             </div>

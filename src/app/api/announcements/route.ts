@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
         where: { orgId: user.orgId },
         include: {
           author: { select: { id: true, name: true, avatarUrl: true, role: true } },
+          org: { select: { id: true, name: true, logo: true } },
           event: { select: { id: true, title: true, slug: true } },
           _count: { select: { comments: true, reactions: true } },
           reactions: {
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         author: { select: { id: true, name: true, avatarUrl: true, role: true } },
+        org: { select: { id: true, name: true, logo: true } },
         event: { select: { id: true, title: true, slug: true } },
       },
     });

@@ -80,7 +80,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
         select: { id: true, name: true, email: true },
       },
       org: {
-        select: { id: true, name: true, slug: true },
+        select: { id: true, name: true, slug: true, logo: true },
       },
       _count: {
         select: { registrations: { where: { status: { not: "CANCELLED" } } } },

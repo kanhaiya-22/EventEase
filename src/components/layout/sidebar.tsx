@@ -28,8 +28,16 @@ import { Logo } from "@/components/logo";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OrgLogo } from "@/components/ui/org-logo";
 import { dashboardNav } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
+
+interface SidebarProps {
+  org?: {
+    name: string;
+    logo: string | null;
+  } | null;
+}
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -49,7 +57,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   UserCheck,
 };
 
-export function Sidebar() {
+export function Sidebar({ org }: SidebarProps = {}) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -64,6 +72,18 @@ export function Sidebar() {
       <div className="flex h-16 items-center border-b px-4">
         <Logo size="sm" />
       </div>
+
+      {org && (
+        <div className="flex items-center gap-2 border-b px-4 py-3">
+          <OrgLogo src={org.logo} name={org.name} size="sm" rounded="md" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              College
+            </p>
+            <p className="truncate text-sm font-medium">{org.name}</p>
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 space-y-1 p-3">
         {filteredNav.map((item) => {

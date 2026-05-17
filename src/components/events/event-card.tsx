@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, Users, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OrgLogo } from "@/components/ui/org-logo";
 
 interface EventCardProps {
   event: {
@@ -12,7 +13,7 @@ interface EventCardProps {
     startDate: Date;
     capacity: number;
     posterUrl: string | null;
-    org: { name: string } | null;
+    org: { name: string; logo?: string | null } | null;
     _count: { registrations: number };
   };
 }
@@ -156,7 +157,14 @@ export function EventCard({ event }: EventCardProps) {
       {/* Body */}
       <div className="flex flex-1 flex-col gap-3 p-5">
         {event.org && (
-          <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/10 py-0.5 pl-0.5 pr-2 text-[11px] font-medium text-primary">
+            <OrgLogo
+              src={event.org.logo}
+              name={event.org.name}
+              size="xs"
+              rounded="full"
+              className="border-0 bg-background"
+            />
             {event.org.name}
           </span>
         )}

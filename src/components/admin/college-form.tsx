@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createOrganization,
@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrgLogo } from "@/components/ui/org-logo";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Save, Upload, X, Loader2 } from "lucide-react";
 
 interface CollegeFormProps {
   mode: "create" | "edit";
@@ -25,10 +26,12 @@ interface CollegeFormProps {
 
 export function CollegeForm({ mode, defaultValues }: CollegeFormProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(defaultValues?.name || "");
   const [slug, setSlug] = useState(defaultValues?.slug || "");
   const [logo, setLogo] = useState(defaultValues?.logo || "");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const generateSlug = (value: string) => {
     return value
@@ -43,6 +46,40 @@ export function CollegeForm({ mode, defaultValues }: CollegeFormProps) {
     setName(value);
     if (mode === "create") {
       setSlug(generateSlug(value));
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setLogo(data.fileUrl);
+      toast.success("Logo uploaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -108,15 +145,63 @@ export function CollegeForm({ mode, defaultValues }: CollegeFormProps) {
               </p>
             </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="logo">Logo URL (optional)</Label>
-            <Input
-              id="logo"
-              value={logo}
-              onChange={(e) => setLogo(e.target.value)}
-              placeholder="https://example.com/logo.png"
-              type="url"
-            />
+            <Label>College Logo (optional)</Label>
+            <div className="flex items-start gap-4">
+              <OrgLogo src={logo} name={name} size="xl" rounded="lg" />
+              <div className="flex-1 space-y-2">
+                <Input
+                  id="logo"
+                  value={logo}
+                  onChange={(e) => setLogo(e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                  type="url"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Image
+                      </>
+                    )}
+                  </Button>
+                  {logo && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setLogo("")}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Paste an image URL or upload a file (PNG, JPG, WebP up to 10MB).
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -129,7 +214,7 @@ export function CollegeForm({ mode, defaultValues }: CollegeFormProps) {
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={loading} className="min-w-[140px]">
+        <Button type="submit" disabled={loading || uploading} className="min-w-[140px]">
           {loading ? (
             "Saving..."
           ) : (

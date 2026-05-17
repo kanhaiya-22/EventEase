@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OrgLogo } from "@/components/ui/org-logo";
 import { Separator } from "@/components/ui/separator";
 import { ReactionButton } from "./reaction-button";
 import { CommentSection } from "./comment-section";
@@ -82,14 +83,29 @@ export function AnnouncementDetail({
         <CardContent className="pt-6">
           {/* Author */}
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              {announcement.author.avatarUrl && (
-                <AvatarImage src={announcement.author.avatarUrl} />
+            <div className="relative">
+              <Avatar className="h-12 w-12">
+                {announcement.author.avatarUrl && (
+                  <AvatarImage src={announcement.author.avatarUrl} />
+                )}
+                <AvatarFallback>
+                  {announcement.author.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {announcement.org && (
+                <span
+                  className="absolute -bottom-1 -right-1 ring-2 ring-card rounded-md"
+                  title={announcement.org.name}
+                >
+                  <OrgLogo
+                    src={announcement.org.logo}
+                    name={announcement.org.name}
+                    size="xs"
+                    rounded="md"
+                  />
+                </span>
               )}
-              <AvatarFallback>
-                {announcement.author.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold">{announcement.author.name}</span>
@@ -105,6 +121,9 @@ export function AnnouncementDetail({
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
+                {announcement.org && (
+                  <span className="text-foreground/70">{announcement.org.name} · </span>
+                )}
                 {formatDate(announcement.createdAt)}
               </p>
             </div>

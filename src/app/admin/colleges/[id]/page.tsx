@@ -5,14 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteCollegeButton } from "@/components/admin/delete-college-button";
-import {
-  Users,
-  Calendar,
-  Ticket,
-  Edit,
-  Mail,
-  Building2,
-} from "lucide-react";
+import { OrgLogo } from "@/components/ui/org-logo";
+import { Users, Calendar, Ticket, Edit, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default async function CollegeDetailPage({
@@ -111,9 +105,11 @@ export default async function CollegeDetailPage({
         </Link>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-3">
-              <Building2 className="h-8 w-8 text-primary" />
-            </div>
+            <OrgLogo
+              src={organization.logo}
+              name={organization.name}
+              size="xl"
+            />
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
                 {organization.name}

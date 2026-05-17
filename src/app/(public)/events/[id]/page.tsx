@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { EventStatusBadge } from "@/components/events/event-status-badge";
+import { OrgLogo } from "@/components/ui/org-logo";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ACCENT: Record<string, string> = {
@@ -56,6 +57,7 @@ export default async function EventDetailPage({
           id: true,
           name: true,
           slug: true,
+          logo: true,
         },
       },
       registrations: {
@@ -182,7 +184,14 @@ export default async function EventDetailPage({
                   </span>
                   <EventStatusBadge status={event.status} />
                   {event.org && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 py-0.5 pl-0.5 pr-3 text-xs font-medium text-primary">
+                      <OrgLogo
+                        src={event.org.logo}
+                        name={event.org.name}
+                        size="xs"
+                        rounded="full"
+                        className="border-0 bg-background"
+                      />
                       {event.org.name}
                     </span>
                   )}
