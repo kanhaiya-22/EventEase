@@ -1,5 +1,8 @@
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 const protectedRoutes = ["/dashboard", "/events/create", "/organized-events", "/certificates", "/admin", "/profile", "/notifications", "/check-in", "/my-registrations", "/announcements", "/complete-profile"];
 const authRoutes = ["/login", "/register"];

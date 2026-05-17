@@ -1,13 +1,12 @@
 import NextAuth from "next-auth";
-import type { NextAuthConfig } from "next-auth";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validators/auth";
 import { resolveOrgFromEmail } from "@/lib/resolve-org";
+import { authConfig } from "./auth.config";
 
 const basePrismaAdapter = PrismaAdapter(db);
 
@@ -33,20 +32,11 @@ const prismaAdapter: Adapter = {
   },
 };
 
-export const authConfig: NextAuthConfig = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: prismaAdapter,
-  session: { strategy: "jwt" },
-  trustHost: true,
-  pages: {
-    signIn: "/login",
-    newUser: "/complete-profile",
-  },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
-    }),
+    ...authConfig.providers,
     Credentials({
       name: "credentials",
       credentials: {
@@ -84,6 +74,7 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user, trigger }) {
       if (user || trigger === "update") {
         const dbUser = await db.user.findUnique({
@@ -118,19 +109,5 @@ export const authConfig: NextAuthConfig = {
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const user = session.user as any;
-        user.id = token.id;
-        user.role = token.role;
-        user.department = token.department;
-        user.isVerified = token.isVerified;
-        user.profileCompleted = token.profileCompleted;
-      }
-      return session;
-    },
   },
-};
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+});
