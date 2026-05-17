@@ -164,6 +164,43 @@
   }
 }
 
+@keyframes drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(30px, -20px, 0) scale(1.06);
+  }
+}
+
+@keyframes drift-reverse {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-25px, 15px, 0) scale(0.95);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 oklch(0.7 0.15 145 / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px oklch(0.7 0.15 145 / 0);
+  }
+}
+
+@keyframes gradient-pan {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 .animate-blob {
   animation: blob 14s ease-in-out infinite;
 }
@@ -181,11 +218,32 @@
   animation: shimmer 2.5s linear infinite;
 }
 
+.animate-drift {
+  animation: drift 18s ease-in-out infinite;
+}
+
+.animate-drift-reverse {
+  animation: drift-reverse 22s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+
+.animate-gradient-pan {
+  background-size: 200% 200%;
+  animation: gradient-pan 10s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-blob,
   .animate-fade-up,
   .animate-float-slow,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-drift,
+  .animate-drift-reverse,
+  .animate-pulse-soft,
+  .animate-gradient-pan {
     animation: none;
   }
 }

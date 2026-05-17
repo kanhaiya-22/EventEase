@@ -27,10 +27,16 @@ export async function POST(
 
     const user = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, role: true },
     });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (user.role === "ADMIN") {
+      return NextResponse.json(
+        { error: "Admins cannot register for events" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

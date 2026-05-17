@@ -25,17 +25,19 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   const params = await searchParams;
   const { q, category, sort, college } = params;
 
-  // Scope events to the logged-in user's college
+  // Scope events to the logged-in user's college (admins see all colleges)
   const session = await auth();
   let userOrgId: string | null = null;
   let userOrgName: string | null = null;
   let userOrgLogo: string | null = null;
+  let isAdmin = false;
   if (session?.user?.email) {
     const user = await db.user.findUnique({
       where: { email: session.user.email },
       select: { role: true, orgId: true, org: { select: { name: true, logo: true } } },
     });
-    if (user?.orgId) {
+    isAdmin = user?.role === "ADMIN";
+    if (user?.orgId && !isAdmin) {
       userOrgId = user.orgId;
       userOrgName = user.org?.name ?? null;
       userOrgLogo = user.org?.logo ?? null;
@@ -45,9 +47,9 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   // Build dynamic where clause
   const where: Prisma.EventWhereInput = {
     status: "PUBLISHED",
-    // Logged-in users see only their college's events
+    // Non-admin logged-in users see only their college's events
     ...(userOrgId && { orgId: userOrgId }),
-    // Logged-out users can filter to a specific college by slug
+    // Admins and logged-out users can filter to a specific college by slug
     ...(!userOrgId && college && college !== "ALL" && { org: { slug: college } }),
   };
 

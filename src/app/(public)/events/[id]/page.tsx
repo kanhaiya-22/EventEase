@@ -98,20 +98,23 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  // Get current user ID for organizer check
+  // Get current user ID + role for organizer/admin check
   let currentUserId: string | null = null;
+  let currentUserRole: string | null = null;
   if (session?.user?.email) {
     const currentUser = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, role: true },
     });
     currentUserId = currentUser?.id || null;
+    currentUserRole = currentUser?.role || null;
   }
 
   const userRegistration = event.registrations[0];
   const spotsAvailable = event.capacity - event._count.registrations;
   const isFull = spotsAvailable <= 0;
   const isOrganizer = currentUserId === event.organizer.id;
+  const isAdmin = currentUserRole === "ADMIN";
 
   // Parse documents from customFields
   let documents: Array<{ url: string; name: string }> = [];
@@ -378,7 +381,16 @@ export default async function EventDetailPage({
 
                 {/* Registration Status */}
                 {session ? (
-                  isOrganizer ? (
+                  isAdmin ? (
+                    <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-center">
+                      <p className="font-semibold text-primary">
+                        Admin View
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Admins cannot register for events.
+                      </p>
+                    </div>
+                  ) : isOrganizer ? (
                     <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-center">
                       <p className="font-semibold text-primary">
                         You&apos;re the Organizer
