@@ -4,8 +4,9 @@ import { Prisma } from "@prisma/client";
 import { EventFilters } from "@/components/events/event-filters";
 import { EventCard } from "@/components/events/event-card";
 import { Suspense } from "react";
-import { CalendarSearch, Sparkles } from "lucide-react";
+import { CalendarSearch, Sparkles, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { OrgLogo } from "@/components/ui/org-logo";
 
 export const metadata = {
   title: "Events",
@@ -16,25 +17,28 @@ interface EventsPageProps {
     q?: string;
     category?: string;
     sort?: string;
+    college?: string;
   }>;
 }
 
 export default async function EventsPage({ searchParams }: EventsPageProps) {
   const params = await searchParams;
-  const { q, category, sort } = params;
+  const { q, category, sort, college } = params;
 
   // Scope events to the logged-in user's college
   const session = await auth();
   let userOrgId: string | null = null;
   let userOrgName: string | null = null;
+  let userOrgLogo: string | null = null;
   if (session?.user?.email) {
     const user = await db.user.findUnique({
       where: { email: session.user.email },
-      select: { role: true, orgId: true, org: { select: { name: true } } },
+      select: { role: true, orgId: true, org: { select: { name: true, logo: true } } },
     });
     if (user?.orgId) {
       userOrgId = user.orgId;
       userOrgName = user.org?.name ?? null;
+      userOrgLogo = user.org?.logo ?? null;
     }
   }
 
@@ -43,6 +47,8 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     status: "PUBLISHED",
     // Logged-in users see only their college's events
     ...(userOrgId && { orgId: userOrgId }),
+    // Logged-out users can filter to a specific college by slug
+    ...(!userOrgId && college && college !== "ALL" && { org: { slug: college } }),
   };
 
   if (q) {
@@ -56,6 +62,16 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   if (category && category !== "ALL") {
     where.category = category as Prisma.EnumEventCategoryFilter;
   }
+
+  // For logged-out visitors, list colleges that actually have published events
+  // so the dropdown only offers useful choices.
+  const colleges = userOrgId
+    ? []
+    : await db.organization.findMany({
+        where: { events: { some: { status: "PUBLISHED" } } },
+        select: { slug: true, name: true },
+        orderBy: { name: "asc" },
+      });
 
   // Build orderBy
   let orderBy: Prisma.EventOrderByWithRelationInput;
@@ -89,34 +105,85 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     orderBy,
   });
 
-  const hasFilters = Boolean(q || (category && category !== "ALL"));
-  const resultText = hasFilters
-    ? `${events.length} event${events.length !== 1 ? "s" : ""} match your filters`
-    : `${events.length} event${events.length !== 1 ? "s" : ""} happening`;
+  const hasFilters = Boolean(
+    q || (category && category !== "ALL") || (college && college !== "ALL")
+  );
+
+  // For logged-out viewers who picked a college from the dropdown, show that
+  // name in the hero heading instead of the generic "Discover events".
+  const selectedCollegeName =
+    !userOrgId && college && college !== "ALL"
+      ? (colleges.find((c) => c.slug === college)?.name ?? null)
+      : null;
+  const heroOrgName = userOrgName ?? selectedCollegeName;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero strip — soft tinted gradient behind the title only */}
+      {/* Hero strip — compact with animated gradient blobs */}
       <div className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-background">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,theme(colors.primary/15),transparent_60%)]"
+          className="pointer-events-none absolute -top-12 -right-10 h-48 w-48 rounded-full bg-primary/20 blur-3xl animate-blob"
         />
-        <div className="container relative mx-auto px-4 py-12 sm:py-16">
-          <div className="flex flex-col items-start gap-3">
-            {userOrgName && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                {userOrgName}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-fuchsia-500/15 blur-3xl animate-blob"
+          style={{ animationDelay: "2s" }}
+        />
+        <div className="container relative mx-auto px-4 py-5 sm:py-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="animate-fade-up space-y-1.5">
+              {heroOrgName && (
+                <span className="group inline-flex items-center gap-1.5 rounded-full border bg-card/80 py-0.5 pl-0.5 pr-3 text-xs font-medium text-muted-foreground backdrop-blur transition-all hover:bg-card hover:text-foreground hover:shadow-sm">
+                  <OrgLogo
+                    src={userOrgLogo}
+                    name={heroOrgName}
+                    size="xs"
+                    rounded="full"
+                    className="border-0 bg-background"
+                  />
+                  <span className="transition-transform group-hover:translate-x-0.5">
+                    {heroOrgName}
+                  </span>
+                </span>
+              )}
+              <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                {heroOrgName ? (
+                  <>
+                    What&apos;s on at{" "}
+                    <span className="bg-gradient-to-r from-primary via-fuchsia-500 to-primary bg-clip-text text-transparent animate-shimmer">
+                      {heroOrgName}
+                    </span>
+                  </>
+                ) : (
+                  "Discover events"
+                )}
+              </h1>
+            </div>
+
+            <div
+              className="animate-fade-up flex items-center gap-2"
+              style={{ animationDelay: "120ms" }}
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-lg border bg-card/80 px-3 py-1.5 text-sm shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <TrendingUp className="h-4 w-4 text-emerald-500 animate-float-slow" />
+                <span className="font-semibold text-foreground">
+                  {events.length}
+                </span>
+                <span className="text-muted-foreground">
+                  {hasFilters ? "matching" : "live"}
+                </span>
               </span>
-            )}
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              {userOrgName ? `What's on at ${userOrgName}` : "Discover events"}
-            </h1>
-            <p className="max-w-2xl text-base text-muted-foreground">
-              Browse upcoming workshops, hackathons, cultural fests and more.{" "}
-              <span className="font-medium text-foreground">{resultText}</span>.
-            </p>
+              {hasFilters && (
+                <Link
+                  href="/events"
+                  className="inline-flex items-center gap-1 rounded-lg border bg-card/80 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:-translate-y-0.5 hover:text-foreground hover:shadow-md"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Clear
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -124,7 +191,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
       {/* Listing */}
       <div className="container mx-auto px-4 py-8 sm:py-10">
         <Suspense fallback={null}>
-          <EventFilters />
+          <EventFilters colleges={colleges} />
         </Suspense>
 
         {events.length === 0 ? (
@@ -151,8 +218,16 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+            {events.map((event, idx) => (
+              <div
+                key={event.id}
+                className="animate-fade-up"
+                style={{
+                  animationDelay: `${Math.min(idx * 40, 400)}ms`,
+                }}
+              >
+                <EventCard event={event} />
+              </div>
             ))}
           </div>
         )}

@@ -33,13 +33,23 @@ const SORT_OPTIONS = [
   { value: "title", label: "Title: A–Z" },
 ] as const;
 
-export function EventFilters() {
+interface CollegeOption {
+  slug: string;
+  name: string;
+}
+
+interface EventFiltersProps {
+  colleges?: CollegeOption[];
+}
+
+export function EventFilters({ colleges }: EventFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const q = searchParams.get("q") || "";
   const category = searchParams.get("category") || "ALL";
   const sort = searchParams.get("sort") || "date-asc";
+  const college = searchParams.get("college") || "ALL";
 
   const [searchValue, setSearchValue] = useState(q);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,10 +58,14 @@ export function EventFilters() {
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
-        if (value && value !== "ALL" && value !== "date-asc") {
-          params.set(key, value);
-        } else {
+        const isDefault =
+          !value ||
+          value === "ALL" ||
+          (key === "sort" && value === "date-asc");
+        if (isDefault) {
           params.delete(key);
+        } else {
+          params.set(key, value);
         }
       }
       const query = params.toString();
@@ -77,7 +91,8 @@ export function EventFilters() {
     router.push("/events");
   };
 
-  const hasActiveFilters = q || category !== "ALL" || sort !== "date-asc";
+  const hasActiveFilters =
+    q || category !== "ALL" || sort !== "date-asc" || college !== "ALL";
 
   return (
     <div className="mb-8 space-y-3">
@@ -102,6 +117,25 @@ export function EventFilters() {
             </button>
           )}
         </div>
+
+        {colleges && colleges.length > 0 && (
+          <Select
+            value={college}
+            onValueChange={(value) => updateParams({ college: value })}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="College" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All colleges</SelectItem>
+              {colleges.map((c) => (
+                <SelectItem key={c.slug} value={c.slug}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select value={sort} onValueChange={(value) => updateParams({ sort: value })}>
           <SelectTrigger className="w-full sm:w-[200px]">
