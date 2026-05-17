@@ -93,18 +93,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = dbUser.role;
           token.department = dbUser.department;
           token.isVerified = dbUser.isVerified;
-          token.profileCompleted = dbUser.profileCompleted;
 
           // Auto-assign org from email domain for OAuth users who don't have one
-          if (!dbUser.orgId && token.email) {
+          let effectiveOrgId = dbUser.orgId;
+          if (!effectiveOrgId && token.email) {
             const resolved = await resolveOrgFromEmail(token.email);
             if (resolved) {
               await db.user.update({
                 where: { id: dbUser.id },
                 data: { orgId: resolved.orgId },
               });
+              effectiveOrgId = resolved.orgId;
             }
           }
+
+          // A user is profile-complete only when both flags hold AND an org is attached.
+          token.profileCompleted = dbUser.profileCompleted && !!effectiveOrgId;
         }
       }
       return token;

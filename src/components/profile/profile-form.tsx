@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { updateProfile } from "@/lib/actions/profile";
@@ -16,8 +16,15 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Save, X, Plus } from "lucide-react";
+import { Save, X, Plus, Search, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+interface CollegeOption {
+  name: string;
+  slug: string;
+  city: string;
+  type: string;
+}
 
 interface ProfileFormProps {
   user: {
@@ -28,7 +35,10 @@ interface ProfileFormProps {
     year: string | null;
     phone: string | null;
     interests: string[];
+    organizationSlug?: string | null;
+    organizationName?: string | null;
   };
+  colleges?: CollegeOption[];
   redirectTo?: string;
   submitLabel?: string;
 }
@@ -49,7 +59,7 @@ const DEPARTMENTS = [
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "Alumni"];
 
-export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps) {
+export function ProfileForm({ user, colleges, redirectTo, submitLabel }: ProfileFormProps) {
   const router = useRouter();
   const { update: updateSession } = useSession();
   const [name, setName] = useState(user.name);
@@ -59,6 +69,27 @@ export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps)
   const [interests, setInterests] = useState<string[]>(user.interests);
   const [newInterest, setNewInterest] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const needsCollegePick = !user.organizationSlug && !!colleges && colleges.length > 0;
+  const [orgSlug, setOrgSlug] = useState<string>("");
+  const [orgQuery, setOrgQuery] = useState("");
+  const filteredColleges = useMemo(() => {
+    if (!colleges) return [];
+    const q = orgQuery.trim().toLowerCase();
+    if (!q) return colleges.slice(0, 50);
+    return colleges
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.city.toLowerCase().includes(q) ||
+          c.type.toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+  }, [colleges, orgQuery]);
+  const selectedCollege = useMemo(
+    () => colleges?.find((c) => c.slug === orgSlug) ?? null,
+    [colleges, orgSlug]
+  );
 
   const addInterest = () => {
     const trimmed = newInterest.trim();
@@ -74,6 +105,12 @@ export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (needsCollegePick && !orgSlug) {
+      toast.error("Please select your college to continue.");
+      return;
+    }
+
     setLoading(true);
 
     const result = await updateProfile({
@@ -82,6 +119,7 @@ export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps)
       year: year || undefined,
       phone: phone || undefined,
       interests,
+      organizationSlug: needsCollegePick ? orgSlug : undefined,
     });
 
     setLoading(false);
@@ -89,8 +127,14 @@ export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps)
     if (result.success) {
       toast.success(result.message);
       if (redirectTo) {
-        await updateSession();
-        router.push(redirectTo);
+        // useSession().update(undefined) is a plain GET — it does NOT trigger
+        // the jwt callback. Pass a non-undefined arg so NextAuth POSTs to
+        // /api/auth/session, the jwt callback re-reads the DB, and Set-Cookie
+        // refreshes the JWT before we navigate.
+        await updateSession({ refresh: true });
+        window.location.href = redirectTo;
+      } else {
+        await updateSession({ refresh: true });
         router.refresh();
       }
     } else {
@@ -100,6 +144,103 @@ export function ProfileForm({ user, redirectTo, submitLabel }: ProfileFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {needsCollegePick && (
+        <Card className="border-primary/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Select your college
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              We couldn&apos;t auto-detect your college from{" "}
+              <span className="font-medium">{user.email}</span>. Pick the institution you belong to so you can fully use EventEase.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={orgQuery}
+                onChange={(e) => setOrgQuery(e.target.value)}
+                placeholder="Search by name, city, or type (e.g. IIT, KGMU, Lucknow)"
+                className="pl-9"
+              />
+            </div>
+
+            {selectedCollege && (
+              <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{selectedCollege.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCollege.city} · {selectedCollege.type}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOrgSlug("")}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
+
+            {!selectedCollege && (
+              <div className="max-h-64 overflow-y-auto rounded-md border divide-y">
+                {filteredColleges.length === 0 ? (
+                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    No colleges match &quot;{orgQuery}&quot;.
+                  </p>
+                ) : (
+                  filteredColleges.map((c) => (
+                    <button
+                      key={c.slug}
+                      type="button"
+                      onClick={() => {
+                        setOrgSlug(c.slug);
+                        setOrgQuery("");
+                      }}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition"
+                    >
+                      <p className="font-medium">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.city} · {c.type}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Don&apos;t see your college?{" "}
+              <a href="mailto:support@eventease.app" className="underline">
+                Request to add it
+              </a>
+              .
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {user.organizationName && !needsCollegePick && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4" />
+              Your college
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{user.organizationName}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Determined from your email and locked to your account.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>

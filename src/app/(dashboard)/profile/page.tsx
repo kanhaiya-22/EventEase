@@ -18,7 +18,7 @@ export default async function ProfilePage() {
   const user = await db.user.findUnique({
     where: { email: session.user.email },
     include: {
-      org: { select: { name: true } },
+      org: { select: { slug: true, name: true } },
       _count: {
         select: {
           registrations: { where: { status: { not: "CANCELLED" } } },
@@ -86,6 +86,8 @@ export default async function ProfilePage() {
           year: user.year,
           phone: user.phone,
           interests: user.interests,
+          organizationSlug: user.org?.slug ?? null,
+          organizationName: user.org?.name ?? null,
         }}
       />
     </div>
