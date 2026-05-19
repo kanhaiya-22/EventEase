@@ -12,6 +12,36 @@ export const dashboardNav: NavItem[] = [
     icon: "Calendar",
   },
   {
+    title: "Admin Panel",
+    href: "/admin",
+    icon: "Shield",
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Organizer Requests",
+    href: "/admin/organizer-requests",
+    icon: "UserCheck",
+    roles: ["ADMIN"],
+  },
+  {
+    title: "All Announcements",
+    href: "/admin/announcements",
+    icon: "Megaphone",
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Colleges",
+    href: "/admin/colleges",
+    icon: "Building2",
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Messages",
+    href: "/messages",
+    icon: "MessageSquare",
+    roles: ["ADMIN", "ORGANIZER"],
+  },
+  {
     title: "My Registrations",
     href: "/my-registrations",
     icon: "Ticket",
@@ -56,30 +86,6 @@ export const dashboardNav: NavItem[] = [
     title: "Profile",
     href: "/profile",
     icon: "User",
-  },
-  {
-    title: "Colleges",
-    href: "/admin/colleges",
-    icon: "Building2",
-    roles: ["ADMIN"],
-  },
-  {
-    title: "All Announcements",
-    href: "/admin/announcements",
-    icon: "Megaphone",
-    roles: ["ADMIN"],
-  },
-  {
-    title: "Organizer Requests",
-    href: "/admin/organizer-requests",
-    icon: "UserCheck",
-    roles: ["ADMIN"],
-  },
-  {
-    title: "Admin Panel",
-    href: "/admin",
-    icon: "Shield",
-    roles: ["ADMIN"],
   },
 ];
 

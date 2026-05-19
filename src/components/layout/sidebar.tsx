@@ -22,6 +22,7 @@ import {
   Building2,
   Megaphone,
   UserCheck,
+  MessageSquare,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
@@ -55,6 +56,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Building2,
   Megaphone,
   UserCheck,
+  MessageSquare,
 };
 
 export function Sidebar({ org }: SidebarProps = {}) {

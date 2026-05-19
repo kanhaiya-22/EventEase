@@ -24,15 +24,50 @@ const QUICK_PROMPTS = [
   { label: "QR attendance", text: "How does QR attendance work?" },
 ];
 
+const EEVA_POSITION_KEY = "eeva-position";
+const BUTTON_SIZE = 64;
+const EDGE_PADDING = 8;
+const DRAG_THRESHOLD = 5;
+const CHAT_W = 400;
+const CHAT_H = 540;
+const CHAT_GAP = 12;
+
+type Pos = { x: number; y: number };
+
+function clampToViewport(p: Pos): Pos {
+  if (typeof window === "undefined") return p;
+  return {
+    x: Math.max(
+      EDGE_PADDING,
+      Math.min(window.innerWidth - BUTTON_SIZE - EDGE_PADDING, p.x)
+    ),
+    y: Math.max(
+      EDGE_PADDING,
+      Math.min(window.innerHeight - BUTTON_SIZE - EDGE_PADDING, p.y)
+    ),
+  };
+}
+
 export function EevaChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [position, setPosition] = useState<Pos | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef({
+    startX: 0,
+    startY: 0,
+    posX: 0,
+    posY: 0,
+    moved: false,
+    pointerId: -1,
+  });
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,6 +83,110 @@ export function EevaChatbot() {
       setHasNewMessage(false);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(EEVA_POSITION_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+        setPosition(clampToViewport({ x: parsed.x, y: parsed.y }));
+      }
+    } catch {
+      // ignore malformed value
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!position) return;
+    const onResize = () =>
+      setPosition((p) => (p ? clampToViewport(p) : null));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [position]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: rect.left,
+      posY: rect.top,
+      moved: false,
+      pointerId: e.pointerId,
+    };
+    buttonRef.current?.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (dragRef.current.pointerId !== e.pointerId) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    if (!dragRef.current.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    dragRef.current.moved = true;
+    if (!isDragging) setIsDragging(true);
+    setPosition(
+      clampToViewport({
+        x: dragRef.current.posX + dx,
+        y: dragRef.current.posY + dy,
+      })
+    );
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (dragRef.current.pointerId !== e.pointerId) return;
+    if (buttonRef.current?.hasPointerCapture(e.pointerId)) {
+      buttonRef.current.releasePointerCapture(e.pointerId);
+    }
+    dragRef.current.pointerId = -1;
+    if (dragRef.current.moved) {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (rect) {
+        const next = clampToViewport({ x: rect.left, y: rect.top });
+        try {
+          localStorage.setItem(EEVA_POSITION_KEY, JSON.stringify(next));
+        } catch {
+          // storage may be disabled — non-fatal
+        }
+      }
+      // Defer so the synthetic click that follows pointerup gets swallowed.
+      setTimeout(() => {
+        setIsDragging(false);
+        dragRef.current.moved = false;
+      }, 0);
+    } else {
+      setIsDragging(false);
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (dragRef.current.moved) return;
+    setIsOpen((v) => !v);
+  };
+
+  const buttonContainerStyle: React.CSSProperties | undefined = position
+    ? { position: "fixed", left: position.x, top: position.y, zIndex: 50 }
+    : undefined;
+
+  const chatWindowStyle: React.CSSProperties | undefined = (() => {
+    if (!position || typeof window === "undefined") return undefined;
+    const openUp = position.y + BUTTON_SIZE / 2 > window.innerHeight / 2;
+    const top = openUp
+      ? position.y - CHAT_H - CHAT_GAP
+      : position.y + BUTTON_SIZE + CHAT_GAP;
+    let left = position.x + BUTTON_SIZE / 2 - CHAT_W / 2;
+    left = Math.max(
+      EDGE_PADDING,
+      Math.min(window.innerWidth - CHAT_W - EDGE_PADDING, left)
+    );
+    const clampedTop = Math.max(
+      EDGE_PADDING,
+      Math.min(window.innerHeight - CHAT_H - EDGE_PADDING, top)
+    );
+    return { position: "fixed", left, top: clampedTop, zIndex: 50 };
+  })();
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -133,23 +272,36 @@ export function EevaChatbot() {
   return (
     <>
       {/* ===== Floating Eeva Button ===== */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div
+        className={position ? "" : "fixed bottom-6 right-6 z-50"}
+        style={buttonContainerStyle}
+      >
         {/* Tooltip when closed */}
-        {!isOpen && (
+        {!isOpen && !isDragging && (
           <div className="absolute -top-12 right-0 whitespace-nowrap rounded-xl bg-white px-3 py-1.5 text-xs font-medium text-purple-700 shadow-lg border border-purple-100 eeva-tooltip">
-            Need help? Ask Eeva!
+            Drag to move &middot; Click to chat
             <div className="absolute -bottom-1 right-5 h-2 w-2 rotate-45 bg-white border-b border-r border-purple-100" />
           </div>
         )}
 
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`group relative flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-all duration-300 hover:shadow-2xl ${
+          ref={buttonRef}
+          onClick={handleButtonClick}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: "none" }}
+          className={`group relative flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-shadow duration-300 hover:shadow-2xl ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          } ${
             isOpen
               ? "bg-gradient-to-br from-purple-100 to-purple-200 scale-90"
-              : "bg-gradient-to-br from-violet-500 to-purple-700 eeva-float hover:scale-110"
+              : `bg-gradient-to-br from-violet-500 to-purple-700 ${
+                  isDragging || position ? "" : "eeva-float hover:scale-110"
+                }`
           }`}
-          aria-label={isOpen ? "Close Eeva" : "Chat with Eeva"}
+          aria-label={isOpen ? "Close Eeva" : "Chat with Eeva (drag to move)"}
         >
           {isOpen ? (
             <X className="h-6 w-6 text-purple-700" />
@@ -174,7 +326,12 @@ export function EevaChatbot() {
 
       {/* ===== Chat Window ===== */}
       {isOpen && (
-        <div className="fixed bottom-[6.5rem] right-6 z-50 flex h-[540px] w-[400px] flex-col overflow-hidden rounded-2xl border border-purple-200/60 bg-white shadow-2xl eeva-slide-up">
+        <div
+          style={chatWindowStyle}
+          className={`${
+            chatWindowStyle ? "" : "fixed bottom-[6.5rem] right-6 z-50"
+          } flex h-[540px] w-[400px] flex-col overflow-hidden rounded-2xl border border-purple-200/60 bg-white shadow-2xl eeva-slide-up`}
+        >
           {/* --- Header --- */}
           <div className="relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-4 py-3.5">
             {/* Decorative circles */}
