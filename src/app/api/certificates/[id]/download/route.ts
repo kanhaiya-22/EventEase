@@ -40,7 +40,7 @@ export async function GET(
             category: true,
             organizerId: true,
             org: {
-              select: { name: true },
+              select: { name: true, logo: true },
             },
           },
         },
@@ -100,6 +100,8 @@ export async function GET(
       eventTitle: certificate.event.title,
       eventCategory: certificate.event.category,
       organizationName: certificate.event.org?.name || "EventEase",
+      organizationLogo: certificate.event.org?.logo || null,
+      appUrl,
       issuedDate: new Date(certificate.issuedAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -144,6 +146,8 @@ interface CertificateData {
   eventTitle: string;
   eventCategory: string;
   organizationName: string;
+  organizationLogo: string | null;
+  appUrl: string;
   issuedDate: string;
   venue: string;
   verificationCode: string;
@@ -259,6 +263,58 @@ function generateCertificateHTML(data: CertificateData): string {
     .corner-bl { bottom: 20px; left: 20px; transform: scaleY(-1); }
     .corner-br { bottom: 20px; right: 20px; transform: scale(-1); }
 
+    /* ── Header Row (logos + title) ── */
+    .cert-header-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-shrink: 0;
+      margin-bottom: 8px;
+    }
+
+    .logo-slot {
+      flex: 0 0 110px;
+      display: flex;
+      align-items: center;
+      height: 80px;
+    }
+
+    .logo-slot-left { justify-content: flex-start; }
+    .logo-slot-right { justify-content: flex-end; }
+
+    .cert-logo {
+      max-height: 72px;
+      max-width: 110px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .cert-logo-ee,
+    .cert-logo-org {
+      width: 72px;
+      height: 72px;
+      max-width: 72px;
+      max-height: 72px;
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 2px #fffef9,
+        0 0 0 3px #c9a84c,
+        0 4px 10px rgba(30, 58, 95, 0.18);
+    }
+
+    .cert-logo-ee {
+      object-fit: cover;
+      background: #6C3CE1;
+    }
+
+    .cert-logo-org {
+      object-fit: contain;
+      background: #fffef9;
+      padding: 6px;
+    }
+
     /* ── Main Content Grid ── */
     .cert-content {
       position: absolute;
@@ -281,8 +337,8 @@ function generateCertificateHTML(data: CertificateData): string {
     /* ── Header Section ── */
     .cert-header {
       text-align: center;
-      flex-shrink: 0;
-      margin-bottom: 8px;
+      flex: 1;
+      min-width: 0;
     }
 
     .org-name {
@@ -654,16 +710,28 @@ function generateCertificateHTML(data: CertificateData): string {
       <div class="cert-content">
         <div class="accent-bar"></div>
 
-        <!-- Header -->
-        <div class="cert-header">
-          <div class="org-name">${e(data.organizationName)}</div>
-          <div class="cert-title">CERTIFICATE</div>
-          <div class="title-divider">
-            <div class="line"></div>
-            <div class="diamond"></div>
-            <div class="line"></div>
+        <!-- Header Row: institute logo · title · EventEase logo -->
+        <div class="cert-header-row">
+          <div class="logo-slot logo-slot-left">
+            ${
+              data.organizationLogo
+                ? `<img src="${e(data.organizationLogo)}" alt="${e(data.organizationName)} logo" class="cert-logo cert-logo-org" />`
+                : ""
+            }
           </div>
-          <div class="cert-subtitle">of Participation &amp; Achievement</div>
+          <div class="cert-header">
+            <div class="org-name">${e(data.organizationName)}</div>
+            <div class="cert-title">CERTIFICATE</div>
+            <div class="title-divider">
+              <div class="line"></div>
+              <div class="diamond"></div>
+              <div class="line"></div>
+            </div>
+            <div class="cert-subtitle">of Participation &amp; Achievement</div>
+          </div>
+          <div class="logo-slot logo-slot-right">
+            <img src="${e(data.appUrl)}/logo.svg" alt="EventEase logo" class="cert-logo cert-logo-ee" />
+          </div>
         </div>
 
         <!-- Body -->
