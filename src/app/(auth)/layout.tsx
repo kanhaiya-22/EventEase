@@ -9,7 +9,11 @@ export default function AuthLayout({
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-primary p-12 text-primary-foreground">
-        <Logo size="lg" className="text-primary-foreground" />
+        <Logo
+          size="lg"
+          className="text-primary-foreground"
+          highlightClassName="text-amber-400"
+        />
         <div>
           <h1 className="text-4xl font-bold leading-tight">
             Manage college events

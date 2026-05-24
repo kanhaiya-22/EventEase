@@ -6,6 +6,7 @@ interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   showText?: boolean;
+  highlightClassName?: string;
 }
 
 const sizes = {
@@ -14,7 +15,12 @@ const sizes = {
   lg: 48,
 };
 
-export function Logo({ className, size = "md", showText = true }: LogoProps) {
+export function Logo({
+  className,
+  size = "md",
+  showText = true,
+  highlightClassName = "text-primary",
+}: LogoProps) {
   return (
     <Link href="/" className={cn("flex items-center gap-2", className)}>
       <Image
@@ -32,7 +38,7 @@ export function Logo({ className, size = "md", showText = true }: LogoProps) {
             "text-2xl": size === "lg",
           })}
         >
-          Event<span className="text-primary">Ease</span>
+          Event<span className={highlightClassName}>Ease</span>
         </span>
       )}
     </Link>
